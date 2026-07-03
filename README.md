@@ -1,4 +1,4 @@
-# mink-warp
+# MINK-WARP
 
 Batched differential inverse kinematics on [MuJoCo Warp](https://github.com/google-deepmind/mujoco_warp), with a [Mink](https://github.com/kevinzakka/mink)-shaped API.
 
