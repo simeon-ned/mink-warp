@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mink-warp"
+version = "0.1.0"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+readme = { file = "README.md", content-type = "text/markdown" }
+description = "Batched differential inverse kinematics on MuJoCo Warp, with a Mink-shaped API"
+requires-python = ">=3.10,<3.14"
+keywords = ["inverse", "kinematics", "mujoco", "warp"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "mujoco >= 3.8.1",
+    "mujoco-warp",
+    "warp-lang",
+    "numpy",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "mink>=1.1.0",
+    "ruff>=0.14.0",
+]
+examples = [
+    "mjviser>=0.0.14",
+    "viser",
+]
+
+[project.urls]
+Source = "https://github.com/simeon-ned/mink-warp"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mink_warp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+src = ["src"]
+lint.select = ["E", "F", "I"]
+lint.ignore = ["E501"]
