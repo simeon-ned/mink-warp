@@ -2,7 +2,15 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import warp as wp
+
+# Cache of nv-specialized tile Cholesky kernels (Newton-style).
+_CHOLESKY_CACHE: dict[int, Any] = {}
+
+# Threads per block for tile Cholesky (must be a multiple of 32).
+TILE_THREADS = 32
 
 
 @wp.kernel
@@ -82,46 +90,53 @@ def neg_vec(
         b[worldid, i] = -c[worldid, i]
 
 
-@wp.kernel
-def cholesky_solve_batched(
-    A: wp.array3d[float],
-    b: wp.array2d[float],
-    n: int,
-    x: wp.array2d[float],
-):
-    """Batched Cholesky solve ``A x = b`` for SPD ``A`` (n×n), one world per thread.
+def get_cholesky_solve_kernel(nv: int):
+    """Return a batched SPD solve kernel specialized for size ``nv``.
 
-    Overwrites ``A`` with its lower-triangular Cholesky factor.
+    Uses Warp tile Cholesky (cuSolverDx when available), Newton-style:
+    one **block** per world via :func:`wp.launch_tiled`.
     """
-    worldid = wp.tid()
+    if nv in _CHOLESKY_CACHE:
+        return _CHOLESKY_CACHE[nv]
 
-    # A = L Lᵀ, L stored in lower triangle of A.
-    for i in range(n):
-        s = A[worldid, i, i]
-        for k in range(i):
-            lik = A[worldid, i, k]
-            s -= lik * lik
-        if s < 1.0e-12:
-            s = 1.0e-12
-        diag = wp.sqrt(s)
-        A[worldid, i, i] = diag
-        for j in range(i + 1, n):
-            s2 = A[worldid, j, i]
-            for k in range(i):
-                s2 -= A[worldid, j, k] * A[worldid, i, k]
-            A[worldid, j, i] = s2 / diag
+    NV = int(nv)
 
-    # Forward substitution: L y = b (y stored in x).
-    for i in range(n):
-        s = b[worldid, i]
-        for k in range(i):
-            s -= A[worldid, i, k] * x[worldid, k]
-        x[worldid, i] = s / A[worldid, i, i]
+    def _cholesky_solve_tiled(
+        H: wp.array3d[float],
+        rhs: wp.array2d[float],
+        dq: wp.array2d[float],
+    ):
+        # With launch_tiled, tid() is the block/world index; threads in the
+        # block cooperate on the tile.
+        worldid = wp.tid()
+        A = wp.tile_load(H[worldid], shape=(NV, NV))
+        b = wp.tile_load(rhs[worldid], shape=(NV,))
+        L = wp.tile_cholesky(A)
+        x = wp.tile_cholesky_solve(L, b)
+        wp.tile_store(dq[worldid], x)
 
-    # Back substitution: Lᵀ x = y.
-    for ii in range(n):
-        i = n - 1 - ii
-        s = x[worldid, i]
-        for k in range(i + 1, n):
-            s -= A[worldid, k, i] * x[worldid, k]
-        x[worldid, i] = s / A[worldid, i, i]
+    _cholesky_solve_tiled.__name__ = f"cholesky_solve_tiled_{NV}"
+    _cholesky_solve_tiled.__qualname__ = f"cholesky_solve_tiled_{NV}"
+    kernel = wp.kernel(enable_backward=False, module="unique")(_cholesky_solve_tiled)
+    _CHOLESKY_CACHE[nv] = kernel
+    return kernel
+
+
+def launch_cholesky_solve(
+    kernel,
+    *,
+    nworld: int,
+    H: wp.array,
+    rhs: wp.array,
+    dq: wp.array,
+    device: str | None = None,
+) -> None:
+    """Launch a tiled Cholesky solve: one block per world."""
+    wp.launch_tiled(
+        kernel,
+        dim=[nworld],
+        inputs=[H, rhs],
+        outputs=[dq],
+        block_dim=TILE_THREADS,
+        device=device,
+    )

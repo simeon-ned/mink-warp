@@ -10,7 +10,8 @@ from .configuration import Configuration
 from .kernels.solver import (
     accumulate_normal_equations,
     add_damping_diag,
-    cholesky_solve_batched,
+    get_cholesky_solve_kernel,
+    launch_cholesky_solve,
     neg_vec,
     scale_velocity,
     zero_normal_equations,
@@ -40,6 +41,8 @@ class IKSolver:
             self.rhs = wp.zeros((nworld, nv), dtype=float)
             self.dq = wp.zeros((nworld, nv), dtype=float)
             self.v = wp.zeros((nworld, nv), dtype=float)
+        # Newton-style tile Cholesky, specialized for this model's nv.
+        self._cholesky_solve = get_cholesky_solve_kernel(nv)
         self._graph = None
         self._graph_tasks: tuple[Task, ...] | None = None
         self._graph_dt: float | None = None
@@ -150,11 +153,12 @@ class IKSolver:
                 inputs=[self.c, nv],
                 outputs=[self.rhs],
             )
-            wp.launch(
-                cholesky_solve_batched,
-                dim=nworld,
-                inputs=[self.H, self.rhs, nv],
-                outputs=[self.dq],
+            launch_cholesky_solve(
+                self._cholesky_solve,
+                nworld=nworld,
+                H=self.H,
+                rhs=self.rhs,
+                dq=self.dq,
             )
             wp.launch(
                 scale_velocity,
