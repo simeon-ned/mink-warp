@@ -1,10 +1,10 @@
-"""Batched Warp kernels for kinematics helpers and frame tasks."""
+"""Kinematics and frame-task kernels."""
 
 from __future__ import annotations
 
 import warp as wp
 
-from .wp_ops import (
+from ..lie.wp_ops import (
     mat_to_quat_wxyz,
     quat_conj_wxyz,
     quat_mul_wxyz,
@@ -13,7 +13,6 @@ from .wp_ops import (
     se3_rminus,
     spatial_mat_mul_vec,
 )
-
 
 @wp.kernel
 def fill_body_frame_query(
@@ -186,81 +185,3 @@ def frame_task_error_jacobian(
             jac_out[worldid, i, dofid] = -jcol[i]
 
 
-@wp.kernel
-def posture_error(
-    q: wp.array2d[float],
-    target_q: wp.array2d[float],
-    nv: int,
-    error_out: wp.array2d[float],
-):
-    """Hinge/slide posture error: e = q - q* (matches mj_differentiatePos when nq==nv)."""
-    worldid = wp.tid()
-    for i in range(nv):
-        error_out[worldid, i] = q[worldid, i] - target_q[worldid, i]
-
-
-@wp.kernel
-def posture_jacobian_eye(
-    nv: int,
-    jac_out: wp.array3d[float],
-):
-    worldid, i, j = wp.tid()
-    if i == j:
-        jac_out[worldid, i, j] = 1.0
-    else:
-        jac_out[worldid, i, j] = 0.0
-
-
-@wp.kernel
-def zero_free_joint_rows(
-    error: wp.array2d[float],
-    jac: wp.array3d[float],
-    v_ids: wp.array[int],
-    n_free_v: int,
-    nv: int,
-):
-    worldid = wp.tid()
-    for k in range(n_free_v):
-        vid = v_ids[k]
-        error[worldid, vid] = 0.0
-        for j in range(nv):
-            jac[worldid, j, vid] = 0.0
-            # also zero column? Mink zeros jac[:, v_ids] i.e. columns
-            # jac is (nv, nv), jac[:, v_ids] = 0 means columns
-        for i in range(nv):
-            jac[worldid, i, vid] = 0.0
-
-
-@wp.kernel
-def broadcast_q(
-    q: wp.array[float],
-    nq: int,
-    q_out: wp.array2d[float],
-):
-    worldid = wp.tid()
-    for i in range(nq):
-        q_out[worldid, i] = q[i]
-
-
-@wp.kernel
-def weighted_residual(
-    error: wp.array2d[float],
-    jacobian: wp.array3d[float],
-    cost: wp.array[float],
-    gain: float,
-    lm_damping: float,
-    k: int,
-    nv: int,
-    weighted_jac: wp.array3d[float],
-    weighted_err: wp.array2d[float],
-    mu_out: wp.array[float],
-):
-    worldid = wp.tid()
-    mu = float(0.0)
-    for i in range(k):
-        we = cost[i] * (-gain * error[worldid, i])
-        weighted_err[worldid, i] = we
-        mu += we * we
-        for j in range(nv):
-            weighted_jac[worldid, i, j] = cost[i] * jacobian[worldid, i, j]
-    mu_out[worldid] = lm_damping * mu

@@ -1,54 +1,27 @@
-"""All kinematic tasks derive from the :class:`Task` base class."""
+"""Task base classes."""
 
 from __future__ import annotations
 
 import abc
-from typing import NamedTuple
 
 import numpy as np
+import numpy.typing as npt
 import warp as wp
 
 from ..configuration import Configuration
-from ..exceptions import InvalidDamping, InvalidGain
+from ..exceptions import InvalidDamping, InvalidGain, TargetNotSet
+from ..interop import to_wp
+from ..kernels.residual import weighted_residual
 
 
-class Objective(NamedTuple):
-    r"""Quadratic objective :math:`\frac{1}{2} \Delta q^T H \Delta q + c^T \Delta q`.
+class Task(abc.ABC):
+    """Kinematic task with device-native error and Jacobian."""
 
-    Device arrays: ``H`` is ``(nworld, nv, nv)``, ``c`` is ``(nworld, nv)``.
-    """
-
-    H: wp.array
-    c: wp.array
-
-
-class BaseTask(abc.ABC):
-    """Base class for all tasks."""
-
-    @abc.abstractmethod
-    def compute_qp_objective(self, configuration: Configuration) -> Objective:
-        raise NotImplementedError
-
-    def compute_qp_residual(
-        self, configuration: Configuration
-    ) -> tuple[wp.array, wp.array, wp.array] | None:
-        r"""Weighted least-squares residual on device, or ``None``.
-
-        Returns ``(weighted_jacobian, weighted_error, mu)`` with shapes
-        ``(nworld, k, nv)``, ``(nworld, k)``, ``(nworld,)``.
-        """
-        return None
-
-
-class Task(BaseTask):
-    r"""Abstract base class for kinematic tasks.
-
-    Device-native: ``compute_error`` / ``compute_jacobian`` return ``wp.array``.
-    """
+    k: int = 0
 
     def __init__(
         self,
-        cost: np.ndarray,
+        cost: npt.ArrayLike,
         gain: float = 1.0,
         lm_damping: float = 0.0,
     ):
@@ -56,17 +29,162 @@ class Task(BaseTask):
             raise InvalidGain("`gain` must be in the range [0, 1]")
         if lm_damping < 0.0:
             raise InvalidDamping("`lm_damping` must be >= 0")
-
-        self.cost = np.asarray(cost, dtype=np.float64)
+        self.cost = np.atleast_1d(np.asarray(cost, dtype=np.float64))
         self.gain = gain
         self.lm_damping = lm_damping
+        self._error: wp.array | None = None
+        self._jacobian: wp.array | None = None
+        self._cost_dev: wp.array | None = None
+        self._weighted_jac: wp.array | None = None
+        self._weighted_err: wp.array | None = None
+        self._mu: wp.array | None = None
+        self._nworld: int | None = None
+        self._device: str | None = None
+        self._nv: int | None = None
 
     @abc.abstractmethod
+    def _eval(self, configuration: Configuration) -> None:
+        """Write ``self._error`` and ``self._jacobian`` on device."""
+
+    def _alloc_extra_buffers(self, configuration: Configuration) -> None:
+        """Allocate task-specific buffers (targets, etc.)."""
+
+    def _ensure_buffers(self, configuration: Configuration) -> None:
+        nworld = configuration.nworld
+        device = configuration.device
+        nv = configuration.nv
+        if (
+            self._nworld == nworld
+            and self._device == device
+            and self._nv == nv
+            and self._error is not None
+        ):
+            return
+        with wp.ScopedDevice(device):
+            self._error = wp.zeros((nworld, self.k), dtype=float)
+            self._jacobian = wp.zeros((nworld, self.k, nv), dtype=float)
+            self._cost_dev = wp.array(self.cost.astype(np.float32), dtype=float)
+            self._weighted_jac = wp.zeros((nworld, self.k, nv), dtype=float)
+            self._weighted_err = wp.zeros((nworld, self.k), dtype=float)
+            self._mu = wp.zeros(nworld, dtype=float)
+            self._alloc_extra_buffers(configuration)
+        self._nworld = nworld
+        self._device = device
+        self._nv = nv
+
     def compute_error(self, configuration: Configuration) -> wp.array:
-        """Task error on device, shape ``(nworld, k)``."""
-        raise NotImplementedError
+        self._ensure_buffers(configuration)
+        self._eval(configuration)
+        assert self._error is not None
+        return self._error
 
-    @abc.abstractmethod
     def compute_jacobian(self, configuration: Configuration) -> wp.array:
-        """Task Jacobian on device, shape ``(nworld, k, nv)``."""
-        raise NotImplementedError
+        self._ensure_buffers(configuration)
+        self._eval(configuration)
+        assert self._jacobian is not None
+        return self._jacobian
+
+    def compute_residual(
+        self, configuration: Configuration
+    ) -> tuple[wp.array, wp.array, wp.array]:
+        """Weighted residual ``(W, e, mu)`` for the IK normal equations."""
+        self._ensure_buffers(configuration)
+        self._eval(configuration)
+        assert self._error is not None
+        assert self._jacobian is not None
+        assert self._cost_dev is not None
+        assert self._weighted_jac is not None
+        assert self._weighted_err is not None
+        assert self._mu is not None
+        with wp.ScopedDevice(configuration.device):
+            if self._cost_dev is None:
+                self._cost_dev = wp.array(self.cost.astype(np.float32), dtype=float)
+            wp.launch(
+                weighted_residual,
+                dim=configuration.nworld,
+                inputs=[
+                    self._error,
+                    self._jacobian,
+                    self._cost_dev,
+                    float(self.gain),
+                    float(self.lm_damping),
+                    self.k,
+                    configuration.nv,
+                ],
+                outputs=[self._weighted_jac, self._weighted_err, self._mu],
+            )
+        return self._weighted_jac, self._weighted_err, self._mu
+
+    # Mink-compatible alias.
+    compute_qp_residual = compute_residual
+
+
+class TargetedTask(Task):
+    """Task with a device target buffer and optional host upload."""
+
+    target_width: int = 0
+
+    def __init__(self, cost, gain=1.0, lm_damping=0.0):
+        super().__init__(cost, gain, lm_damping)
+        self._target: wp.array | None = None
+        self._pending: wp.array | None = None
+        self._target_set = False
+
+    def _alloc_extra_buffers(self, configuration: Configuration) -> None:
+        self._target = wp.zeros(
+            (configuration.nworld, self.target_width), dtype=float
+        )
+
+    def _set_pending(
+        self,
+        target: wp.array | npt.ArrayLike,
+        *,
+        configuration: Configuration | None = None,
+    ) -> None:
+        if isinstance(target, wp.array):
+            self._pending = target
+        else:
+            arr = np.asarray(target, dtype=np.float32)
+            self._pending = to_wp(arr, dtype=float)
+        self._target_set = True
+        if configuration is not None:
+            self._ensure_buffers(configuration)
+            self._flush_pending(configuration.nworld, configuration.device)
+        elif self._target is not None and self._nworld is not None:
+            self._flush_pending(self._nworld, self._device)
+
+    def _flush_pending(self, nworld: int, device: str | None) -> None:
+        assert self._target is not None and device is not None
+        src = self._pending
+        if src is None:
+            if not self._target_set:
+                raise TargetNotSet(self.__class__.__name__)
+            return
+        w = self.target_width
+        with wp.ScopedDevice(device):
+            if src.shape == (w,):
+                self._broadcast_target(src, nworld)
+            elif src.shape == (nworld, w):
+                wp.copy(self._target, src)
+            else:
+                raise TargetNotSet(
+                    f"{self.__class__.__name__}: target shape {src.shape} "
+                    f"incompatible with nworld={nworld}, width={w}"
+                )
+        self._pending = None
+
+    def _broadcast_target(self, src: wp.array, nworld: int) -> None:
+        """Broadcast a single target row to all worlds. Override if needed."""
+        assert self._target is not None
+        # Generic: tile via numpy upload (rare path). Prefer override with kernel.
+        row = src.numpy()
+        tiled = np.broadcast_to(row, (nworld, self.target_width)).copy()
+        self._target.assign(tiled)
+
+    def _require_target(self, configuration: Configuration) -> wp.array:
+        if not self._target_set:
+            raise TargetNotSet(self.__class__.__name__)
+        self._ensure_buffers(configuration)
+        self._flush_pending(configuration.nworld, configuration.device)
+        assert self._target is not None
+        return self._target

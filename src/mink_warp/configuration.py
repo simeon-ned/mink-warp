@@ -10,16 +10,17 @@ import warp as wp
 
 from . import constants as consts
 from . import exceptions
+from .integrate import integrate_qpos
 from .interop import to_wp
-from .lie import SE3
-from .lie.kernels import (
+from .kernels.frame import (
     body_frame_jacobian,
-    broadcast_q,
     fill_body_frame_query,
     fill_geom_frame_query,
     fill_site_frame_query,
     frame_pose_wxyz_xyz,
 )
+from .kernels.posture import broadcast_q
+from .lie import SE3
 
 
 class Configuration:
@@ -137,57 +138,69 @@ class Configuration:
         pose = self.get_transform_frame_to_world(frame_name, frame_type).numpy()
         return SE3(wxyz_xyz=pose[0].astype(np.float64))
 
+    def set_integration_dt(self, dt: float) -> None:
+        """Write the integrate timestep to device (call outside CUDA graphs)."""
+        self._dt_wp.assign(np.array([dt], dtype=np.float32))
+
     def integrate(self, velocity: npt.ArrayLike | wp.array, dt: float) -> wp.array:
         """Integrate velocity on device; returns new ``q`` of shape ``(nworld, nq)``.
 
-        Uses MuJoCo Warp's ``_next_position`` kernel (same as the simulator's
-        position integrate: free / ball / hinge / slide).
+        Uses MuJoCo Warp's ``_next_position`` kernel (free / ball / hinge / slide).
         """
         with wp.ScopedDevice(self.device):
-            wp.copy(self._q_out_wp, self.wp_data.qpos)
-            self._integrate_into(self._q_out_wp, velocity, dt)
+            self.set_integration_dt(dt)
+            self._integrate_qpos(
+                q_in=self.wp_data.qpos,
+                q_out=self._q_out_wp,
+                velocity=velocity,
+            )
             return self._q_out_wp
 
     def integrate_inplace(
-        self, velocity: npt.ArrayLike | wp.array, dt: float
+        self, velocity: npt.ArrayLike | wp.array, dt: float | None = None
     ) -> None:
-        """Integrate velocity into ``q`` on device and refresh kinematics."""
+        """Integrate velocity into ``q`` on device and refresh kinematics.
+
+        If ``dt`` is None, uses the value last written by :meth:`set_integration_dt`
+        (needed inside CUDA graphs, which cannot host-assign).
+        """
         with wp.ScopedDevice(self.device):
-            self._integrate_into(self.wp_data.qpos, velocity, dt)
+            if dt is not None:
+                self.set_integration_dt(dt)
+            # Out-of-place integrate then copy back (in-place aliasing breaks CUDA graphs).
+            self._integrate_qpos(
+                q_in=self.wp_data.qpos,
+                q_out=self._q_out_wp,
+                velocity=velocity,
+            )
+            wp.copy(self.wp_data.qpos, self._q_out_wp)
             mjwarp.kinematics(self.wp_model, self.wp_data)
             mjwarp.com_pos(self.wp_model, self.wp_data)
 
-    def _integrate_into(
+    def _integrate_qpos(
         self,
+        *,
+        q_in: wp.array,
         q_out: wp.array,
         velocity: npt.ArrayLike | wp.array,
-        dt: float,
     ) -> None:
-        """Write ``q_out = integrate(q_out, velocity, dt)`` using mjwarp."""
-        from mujoco_warp._src.forward import _next_position
-
+        """``q_out = integrate(q_in, velocity, dt_buf)`` using mjwarp."""
         v = self._as_velocity_batch(velocity)
-        self._dt_wp.assign(np.array([dt], dtype=np.float32))
-        wp.launch(
-            _next_position,
-            dim=(self.nworld, self.model.njnt),
-            inputs=[
-                self._dt_wp,
-                self.wp_model.jnt_type,
-                self.wp_model.jnt_qposadr,
-                self.wp_model.jnt_dofadr,
-                q_out,
-                v,
-                1.0,
-            ],
-            outputs=[q_out],
+        integrate_qpos(
+            q_in=q_in,
+            q_out=q_out,
+            velocity=v,
+            dt_buf=self._dt_wp,
+            jnt_type=self.wp_model.jnt_type,
+            jnt_qposadr=self.wp_model.jnt_qposadr,
+            jnt_dofadr=self.wp_model.jnt_dofadr,
+            nworld=self.nworld,
+            njnt=self.model.njnt,
         )
 
     def _as_velocity_batch(self, velocity: npt.ArrayLike | wp.array) -> wp.array:
         if isinstance(velocity, wp.array):
             if velocity.shape == (self.nv,):
-                from .lie.kernels import broadcast_q
-
                 wp.launch(
                     broadcast_q,
                     dim=self.nworld,
