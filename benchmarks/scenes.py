@@ -39,12 +39,13 @@ _AMP = 0.08
 _FREQ = 0.5
 
 
-def _circle_targets(base: np.ndarray, t: float, phase: np.ndarray | float = 0.0) -> np.ndarray:
+def _circle_targets(base: np.ndarray, t: float, phase: np.ndarray | float = 0.0,
+                    amp: float = _AMP, freq: float = _FREQ) -> np.ndarray:
     """Offset a batch of ``wxyz_xyz`` poses along an x-z circle at time ``t``."""
     tg = base.copy()
-    a = 2.0 * math.pi * _FREQ * t + phase
-    tg[:, 4] += _AMP * np.cos(a)
-    tg[:, 6] += _AMP * np.sin(a)
+    a = 2.0 * math.pi * freq * t + phase
+    tg[:, 4] += amp * np.cos(a)
+    tg[:, 6] += amp * np.sin(a)
     return tg
 
 
@@ -86,7 +87,9 @@ def setup_panda_mw(nworld: int, device: str | None = None, seed: int = 0,
 
 
 def update_panda_mw(s: State, t: float) -> None:
-    tg = _circle_targets(s["base"], t, s["phase"])
+    tg = _circle_targets(s["base"], t, s["phase"],
+                         amp=_AMP * s.get("amp_scale", 1.0),
+                         freq=_FREQ * s.get("freq_scale", 1.0))
     s["targets"] = tg
     s["frame"].set_target(tg, configuration=s["configuration"])
 
@@ -149,8 +152,10 @@ def setup_g1_mw(nworld: int, device: str | None = None, seed: int = 0,
 
 def update_g1_mw(s: State, t: float) -> None:
     tg = s["base"].copy()
-    # Gentle vertical squat of the pelvis frame.
-    tg[:, 6] += 0.06 * np.sin(2.0 * math.pi * _FREQ * t + s["phase"])
+    # Vertical squat of the pelvis frame (amplitude/rate scalable for hard motion).
+    amp = 0.06 * s.get("amp_scale", 1.0)
+    freq = _FREQ * s.get("freq_scale", 1.0)
+    tg[:, 6] += amp * np.sin(2.0 * math.pi * freq * t + s["phase"])
     s["targets"] = tg
     s["frame"].set_target(tg, configuration=s["configuration"])
 

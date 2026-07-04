@@ -51,6 +51,19 @@ def test_bench_ik_run_batch_each_solver(kind):
     assert np.isfinite(st["mean"])
 
 
+def test_bench_solvers_aggressive_motion_moves_target():
+    import bench_solvers  # noqa: E402
+
+    gentle = bench_solvers.run("panda", "dls", nworld=1, steps=6, warmup=2,
+                               iters=1, use_graph=False, device=None)
+    hard = bench_solvers.run("panda", "dls", nworld=1, steps=6, warmup=2,
+                             iters=1, use_graph=False, device=None,
+                             amp_scale=2.0, freq_scale=6.0)
+    # Aggressive preset moves the target much faster per tick.
+    assert hard["tgt_per_tick"] > 3.0 * gentle["tgt_per_tick"]
+    assert np.isfinite(hard["dpos_mean"])
+
+
 def test_panda_parity_small():
     pytest.importorskip("mink")
     import qpsolvers
