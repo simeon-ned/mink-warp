@@ -28,7 +28,7 @@ from scenes import DT, SCENES
 import mink_warp as mw
 
 _ns = time.perf_counter_ns
-_DEFAULT_ITERS = {"dls": 1, "lm": 5, "lbfgs": 5}
+_DEFAULT_ITERS = {"dls": 1, "lm": 2, "lbfgs": 5}
 _GRAPH_CAPABLE = {"dls", "lm"}
 
 
@@ -81,7 +81,7 @@ def main() -> None:
     ap.add_argument("--steps", type=int, default=150)
     ap.add_argument("--warmup", type=int, default=30)
     ap.add_argument("--iters", type=int, default=None,
-                    help="inner iterations (default: dls=1, lm/lbfgs=5).")
+                    help="inner iterations (default: dls=1, lm=2, lbfgs=5).")
     ap.add_argument("--graph", action="store_true")
     ap.add_argument("--device", default=None)
     args = ap.parse_args()

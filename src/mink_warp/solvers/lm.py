@@ -85,7 +85,7 @@ class LMSolver(Solver):
         tasks: Sequence[Task],
         dt: float,
         *,
-        iterations: int = 10,
+        iterations: int = 2,
         use_graph: bool = False,
         **_ignored,
     ) -> wp.array:

@@ -30,7 +30,7 @@ _ns = time.perf_counter_ns
 
 # L-BFGS does per-candidate line-search step sizes -> no CUDA graph capture.
 _GRAPH_CAPABLE = {"dls", "lm"}
-_DEFAULT_ITERS = {"dls": 1, "lm": 5, "lbfgs": 5}
+_DEFAULT_ITERS = {"dls": 1, "lm": 2, "lbfgs": 5}
 
 
 def run_batch(scene_key: str, nworld: int, steps: int, warmup: int,
@@ -104,7 +104,7 @@ def main() -> None:
     ap.add_argument("--solver", default="dls", choices=["dls", "lm", "lbfgs"],
                     help="IK backend (default: dls).")
     ap.add_argument("--iters", type=int, default=None,
-                    help="inner iterations/call (default: dls=1, lm/lbfgs=5).")
+                    help="inner iterations/call (default: dls=1, lm=2, lbfgs=5).")
     ap.add_argument("--graph", action="store_true", help="Capture a CUDA graph (GPU, dls/lm only).")
     ap.add_argument("--device", default=None, help="warp device, e.g. 'cuda:0' or 'cpu'.")
     ap.add_argument("--save", type=str)

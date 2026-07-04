@@ -94,7 +94,7 @@ class LBFGSSolver(Solver):
         tasks: Sequence[Task],
         dt: float,
         *,
-        iterations: int = 10,
+        iterations: int = 5,
         use_graph: bool = False,  # noqa: ARG002 - eager only
         **_ignored,
     ) -> wp.array:
