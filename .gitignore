@@ -13,3 +13,9 @@ htmlcov/
 .DS_Store
 uv.lock
 ROADMAP.md
+
+# Sphinx build output (local only — make docs)
+docs/_build/
+
+# Personal / pre-public notes (local only)
+docs/PUBLIC_RELEASE.md
