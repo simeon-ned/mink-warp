@@ -72,51 +72,63 @@ uv run python benchmarks/bench_parity.py panda --steps 200   # prints this basel
 uv run python benchmarks/bench_parity.py panda --steps 200        # CPU / GPU
 ```
 
-## Solver backends — throughput vs tracking accuracy (`panda`)
+## Solver backends — throughput vs tracking accuracy
 
 Three interchangeable backends minimise the same weighted task cost behind one
 `solve_and_integrate` API: **`dls`** (one damped Gauss-Newton step/tick, default),
-**`lm`** (Levenberg-Marquardt), **`lbfgs`** (limited-memory BFGS). Optimizer
-backends run `iters` inner iterations per call (default 5). `|Δpos|` = world-0
-end-effector distance to its moving target [m]; lower = tighter tracking.
+**`lm`** (Levenberg-Marquardt), **`lbfgs`** (limited-memory BFGS). Default inner
+iterations per call: `dls`=1, `lm`=2, `lbfgs`=5 (LM is a full Newton step and
+converges in ~1–2 iterations; L-BFGS starts from steepest descent and needs a few
+to ramp up). `|Δpos|` = world-0 tracked-frame distance to its target [m]; lower =
+tighter tracking, and is device-independent (float32, same math on CPU/GPU).
 
-On this gentle circle target DLS already converges each tick, so `lm` matches its
-tracking at ~8× the per-call cost and `lbfgs` (iteration-bounded at 5) trails —
-the optimizer backends earn their cost on **hard / far / redundant** starts where a
-single GN step diverges. Raising `--iters` tightens `|Δpos|` (e.g. `lbfgs --iters 12`
-→ `|Δpos|` mean 3.4e-4).
+Each scene runs under every backend below (`dls`/`lm`/`lbfgs`). `solves/s` = worlds
+× steps ÷ wall time; GPU batched columns use CUDA-graph capture (`dls`/`lm`; `lbfgs`
+is eager). Two regimes:
 
-**CPU** (Apple Silicon, eager, float32):
+- **`panda`** (fixed base, gentle target) — DLS already converges each tick, so LM
+  only *matches* its accuracy (at ~3× the per-call cost) and L-BFGS trails.
+- **`g1`** (floating base, larger target motion) — LM tracks **~3× tighter** than
+  DLS (`|Δpos|` 9.6e-3 → 3.2e-3) because it takes full undamped Newton steps; on
+  GPU at 4096 worlds that costs only ~1.3× the throughput. L-BFGS underperforms on
+  this stiff floating-base problem (its line search stalls; more `--iters` doesn't
+  help). Optimizer backends also add robustness where a plain GN step overshoots —
+  ill-conditioned Jacobians or unreachable targets (an out-of-reach target winds an
+  undamped DLS arm through many revolutions while LM settles at the closest pose).
 
-| solver | iters | 1 world (solves/s) | 256 worlds (solves/s) | µs/solve @256 | `\|Δpos\|` mean | `\|Δpos\|` max |
-|---|--:|--:|--:|--:|--:|--:|
-| dls   | 1 |  2,973 | 159,116 |   6.3 | 2.3e-4 | 7.4e-4 |
-| lm    | 5 |    366 |  20,005 |  50.0 | 2.5e-4 | 8.0e-4 |
-| lbfgs | 5 |    122 |   8,400 | 119.1 | 3.4e-3 | 7.5e-3 |
+CPU = Apple Silicon (eager); GPU = RTX 4070 Ti SUPER (1 world eager, batched CUDA graph).
 
-**GPU** (RTX 4070 Ti SUPER; 1 world eager, ≥256 worlds CUDA graph — `lbfgs` eager):
+### `panda` (fixed base, `FrameTask` + `PostureTask`, nv=9)
 
-| solver | iters | 1 world (solves/s) | 256 (solves/s) | 4096 (solves/s) | `\|Δpos\|` mean | `\|Δpos\|` max |
-|---|--:|--:|--:|--:|--:|--:|
-| dls   | 1 | 2,068 | 877,917 | 9,677,403 | 2.1e-4 | 7.4e-4 |
-| lm    | 5 |   263 | 151,055 | 1,641,489 | 2.2e-4 | 8.0e-4 |
-| lbfgs | 5 |    87 |  21,739 |   344,379 | 3.5e-3 | 1.0e-2 |
+| solver | iters | CPU 1w | CPU 256w | GPU 1w | GPU 4096w | `\|Δpos\|` mean | `\|Δpos\|` max |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| dls   | 1 | 2,861 | 154,987 | 2,016 | 9,610,689 | 2.6e-4 | 8.4e-4 |
+| lm    | 2 |   884 |  48,418 |   623 | 3,672,702 | 2.4e-4 | 8.2e-4 |
+| lbfgs | 5 |   118 |   8,148 |    84 |   344,084 | 3.3e-3 | 8.2e-3 |
+
+### `g1` (floating base, pelvis `FrameTask` + `PostureTask` + `ComTask`, nv=49)
+
+| solver | iters | CPU 1w | CPU 256w | GPU 1w | GPU 4096w | `\|Δpos\|` mean | `\|Δpos\|` max |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| dls   | 1 | 2,034 | 11,224 |   678 | 371,657 | 9.6e-3 | 1.9e-2 |
+| lm    | 2 |   589 |  4,116 |   333 | 278,111 | **3.2e-3** | **4.2e-3** |
+| lbfgs | 5 |    98 |  1,662 |    75 | 223,299 | 4.1e-2 | 6.0e-2 |
 
 ```bash
-uv run python benchmarks/bench_solvers.py --nworld 1 --steps 200                     # CPU 1 world
-uv run python benchmarks/bench_solvers.py --nworld 256 --graph --device cuda:0        # GPU batched
-uv run python benchmarks/bench_solvers.py --nworld 4096 --graph --device cuda:0
+# any scene x any backend, throughput + tracking accuracy
+uv run python benchmarks/bench_solvers.py panda --nworld 256                    # CPU
+uv run python benchmarks/bench_solvers.py g1 --nworld 4096 --graph --device cuda:0
 ```
 
-### LM throughput sweep (`panda`, GPU, CUDA graph, iters=5)
+### LM throughput sweep (`panda`, GPU, CUDA graph, iters=2)
 
 | worlds | solves/s | µs/solve |
 |-------:|---------:|---------:|
-| 1      |     1,353 |    739.0 |
-| 64     |    65,961 |     15.2 |
-| 1024   |   545,998 |     1.83 |
-| 4096   | 1,650,739 |     0.61 |
-| 16384  | 2,123,132 |     0.47 |
+| 1      |     2,998 |  333.6 |
+| 64     |   149,294 |   6.70 |
+| 1024   | 1,290,000 |   0.78 |
+| 4096   | 3,870,652 |   0.26 |
+| 16384  | 5,047,604 |   0.20 |
 
 ```bash
 uv run python benchmarks/bench_ik.py panda --solver lm --graph --batches 1 64 1024 4096 16384

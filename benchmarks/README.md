@@ -57,11 +57,14 @@ uv run python benchmarks/bench_parity.py --steps 500 --tol 2e-3
 
 - **float32.** mink-warp solves in float32; mink in float64. Peak `|Δv|` parity is
   therefore ~1e-3 (mean ~1e-4), so `bench_parity` defaults to `--tol 5e-3`.
-- **Solver choice.** `dls` (1 GN step/tick) already tracks a gently moving target,
-  so on this trajectory `lm`/`lbfgs` mainly add robustness (they still converge from
-  far / redundant starts where a single GN step winds up), at higher per-call cost.
-  Accuracy is iteration-bounded — raise `--iters` to tighten `|Δpos|`. `lbfgs` runs
-  eager only (per-candidate line search is not graph-capturable).
+- **Solver choice.** On the gentle `panda` target `dls` (1 GN step/tick) already
+  converges, so `lm` only matches it; on `g1` (floating base) `lm` tracks ~3× tighter
+  (`|Δpos|` 9.6e-3 → 3.2e-3) by taking full undamped Newton steps. `lm` converges in
+  ~1–2 iterations (default `iters=2`); `lbfgs` starts from steepest descent and needs
+  a few (default 5) but stalls on stiff problems like `g1`. Optimizer backends also
+  add robustness where a plain GN step overshoots (ill-conditioned Jacobians,
+  near-singular or unreachable targets). Raise `--iters` for harder problems. `lbfgs`
+  runs eager only (per-candidate line search is not graph-capturable).
 - **CUDA graph.** `--graph` only engages on a CUDA device (and `dls`/`lm`); CPU runs eager.
 - **Throughput scaling.** On CPU, solves/sec rises with batch until cores saturate;
   the win is on GPU, where thousands of worlds solve in one launch.
