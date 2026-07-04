@@ -17,6 +17,7 @@ throughput sweep and the CPU-vs-GPU parity check.
 |--------|----------|
 | `bench_ik.py`     | Throughput sweep: per-step wall time, µs/solve, solves/sec across batch sizes (eager or CUDA graph). `--solver {dls,lm,lbfgs}`, `--iters`. |
 | `bench_solvers.py`| Solver comparison: throughput **and** end-effector tracking accuracy (`|Δpos|`) per backend on the same trajectory. |
+| `bench_constrained.py`| Constrained (box-ADMM) solver: throughput + **max joint-limit violation** vs `dls`, and `--check` accuracy sweep over `admm_iters` vs mink `daqp`+`ConfigurationLimit`. |
 | `bench_parity.py` | Accuracy: replays a trajectory through mink (CPU, `daqp`, `limits=[]`) and mink-warp (world 0), reports tangent-velocity `|Δv|` and configuration `|Δq|`. |
 | `common.py`       | `summarize` (ported verbatim from mink) + batched helpers (`throughput`, `sync`). |
 | `scenes.py`       | Batched scene registry: `panda` (fixed base, parity-safe), `g1` (floating base, throughput). |
@@ -31,6 +32,7 @@ All three minimise the same weighted task cost and share
 | `dls` (default) | damped Gauss-Newton (Mink's differential step) | one step |
 | `lm`  | Levenberg-Marquardt: adaptive damping + trust-region accept/reject | `iters` steps |
 | `lbfgs` | limited-memory BFGS: two-loop recursion + parallel line search | `iters` steps |
+| `constrained` | box-ADMM enforcing **hard** joint limits (`lo ≤ Δq ≤ hi`); factor `H+ρI` once, `admm_iters` clip+dual steps | `admm_iters` steps |
 
 ## Run
 

@@ -167,5 +167,50 @@ uv run python benchmarks/bench_solvers.py g1 --motion aggressive --nworld 4096 -
 uv run python benchmarks/bench_ik.py panda --solver lm --graph --batches 1 64 1024 4096 16384
 ```
 
+## Constrained solver — hard joint limits (box-ADMM)
+
+The `constrained` backend enforces hard joint **limits** (mink's
+`ConfigurationLimit` / `VelocityLimit`) by solving, per world, the same QP as
+mink — `min ½ ΔqᵀHΔq + cᵀΔq s.t. lo ≤ Δq ≤ hi` — with OSQP-style box-ADMM:
+factor `M = H + ρI` once with the existing tile Cholesky, then `admm_iters`
+cached-solve + box-clip + dual-update steps, returning the projected step, which
+lies **inside the box at every iteration**. So limits are never violated, even
+at `admm_iters=1` or when the target drives the arm hard into a bound — unlike
+the soft `JointLimitTask` penalty. `ρ = ρ_scale·√(min·max diag H)` self-scales
+across scenes; default `admm_iters=30`, `ρ_scale=1.0`.
+
+**Accuracy vs mink** (`daqp` + `ConfigurationLimit`, world 0, lockstep): `|Δv|`
+reaches the float32 parity floor (~6e-4, same as the unconstrained DLS floor) by
+`admm_iters≈30`. Feasibility is exact at *any* iteration count.
+
+| admm_iters | `\|Δv\|` mean | `\|Δv\|` max | max limit violation |
+|--:|--:|--:|--:|
+| 20 | 1.33e-3 | 2.90e-3 | **0** |
+| 30 | 6.12e-4 | 2.53e-3 | **0** |
+| 40 | 5.92e-4 | 2.53e-3 | **0** |
+
+**Throughput vs `dls`** (GPU RTX 4070 Ti SUPER, CUDA graph, aggressive target
+`--amp-scale 3` that pushes joints into their limits). `max viol` = worst joint-
+limit overshoot over the run: `dls` (no limits) blows through by ~1–2 rad; the
+constrained solver holds it at **0** for a small throughput cost that shrinks
+with nv (the one-off factor amortizes over the batch and the K cheap solves are
+relatively free on the larger model).
+
+| scene | worlds | dls solves/s | constrained solves/s | overhead | dls max viol | constrained max viol |
+|---|--:|--:|--:|--:|--:|--:|
+| panda (nv=9)  | 256  |  1,038,419 |   959,042 | 1.08× | 0.99 rad | **0** |
+| panda (nv=9)  | 1024 |  3,891,933 | 3,466,640 | 1.12× | 0.99 rad | **0** |
+| panda (nv=9)  | 4096 | 11,843,821 | 8,909,478 | 1.33× | 0.99 rad | **0** |
+| g1 (nv=49)    | 256  |     24,800 |    24,530 | 1.01× | 2.24 rad | **0** |
+| g1 (nv=49)    | 1024 |     96,851 |    95,761 | 1.01× | 2.24 rad | **0** |
+| g1 (nv=49)    | 4096 |    374,662 |   357,958 | 1.05× | 2.24 rad | **0** |
+
+```bash
+# accuracy sweep vs mink (parity scene), and throughput + violation vs dls
+uv run python benchmarks/bench_constrained.py panda --check --iters 20 30 40 --device cuda:0
+uv run python benchmarks/bench_constrained.py panda --solvers dls constrained --nworld 4096 --amp-scale 3 --graph --device cuda:0
+uv run python benchmarks/bench_constrained.py g1    --solvers dls constrained --nworld 4096 --amp-scale 3 --graph --device cuda:0
+```
+
 _Numbers will shift with GPU model, batch, task stack, and warp/mujoco-warp versions. Re-run on
 your target hardware._
