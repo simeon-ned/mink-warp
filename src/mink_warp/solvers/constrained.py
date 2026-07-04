@@ -53,7 +53,10 @@ class ConstrainedSolver(Solver):
         admm_iters: Inner ADMM iterations per solve (feasibility holds at any
             count; more tightens agreement with the true QP optimum).
         rho_scale, rho_min, rho_max: Control the per-world ADMM penalty
-            ``rho = clamp(rho_scale*mean(diag H), rho_min, rho_max)``.
+            ``rho = clamp(rho_scale*sqrt(min*max diag H), rho_min, rho_max)``.
+            ``rho_min`` must be > 0: it is the hard SPD safeguard that keeps
+            ``M = H + rho I`` positive-definite (so the tile Cholesky never sees
+            a zero pivot) even for a dof untouched by any task.
         alpha: ADMM over-relaxation in [1, 2) (1.6 accelerates convergence).
         damping: Levenberg-Marquardt damping added to ``H``'s diagonal (matches
             mink's ``damping``, applied on top of per-task ``mu``).
@@ -76,6 +79,11 @@ class ConstrainedSolver(Solver):
         super().__init__(configuration)
         if admm_iters < 1:
             raise ValueError(f"admm_iters must be >= 1, got {admm_iters}")
+        if rho_min <= 0.0:
+            raise ValueError(
+                f"rho_min must be > 0 (SPD safeguard for the H+rho*I Cholesky "
+                f"factor), got {rho_min}"
+            )
         if limits is None:
             limits = [ConfigurationLimit(configuration.model)]
         self.limits = list(limits)

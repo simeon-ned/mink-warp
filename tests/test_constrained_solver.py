@@ -43,6 +43,13 @@ def test_admm_iters_guard(arm_model):
         mw.ConstrainedSolver(cfg, admm_iters=0)
 
 
+def test_rho_min_guard(arm_model):
+    # rho_min <= 0 would let M=H+rho*I go singular for a task-untouched dof.
+    cfg = mw.Configuration(arm_model, nworld=1)
+    with pytest.raises(ValueError):
+        mw.ConstrainedSolver(cfg, rho_min=0.0)
+
+
 def test_empty_limits_allowed(arm_model):
     cfg = mw.Configuration(arm_model, nworld=1)
     s = mw.ConstrainedSolver(cfg, limits=[])

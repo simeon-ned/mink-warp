@@ -42,8 +42,19 @@ class ConfigurationLimit(Limit):
         upper: list[float] = []
         for jnt in range(model.njnt):
             jnt_type = model.jnt_type[jnt]
-            if jnt_type not in _SCALAR_JOINTS or not model.jnt_limited[jnt]:
+            if not model.jnt_limited[jnt]:
                 continue
+            if jnt_type == mujoco.mjtJoint.mjJNT_BALL:
+                # mink enforces limited ball joints (3 dofs via mj_differentiatePos);
+                # we don't yet. Fail loud rather than silently drop a hard limit.
+                raise NotImplementedError(
+                    f"ConfigurationLimit does not yet support the limited ball "
+                    f"joint {model.joint(jnt).name!r}; only hinge/slide joints. "
+                    f"mink enforces this limit, so silently ignoring it would "
+                    f"break parity and safety."
+                )
+            if jnt_type not in _SCALAR_JOINTS:
+                continue  # free joints are never limited here (mink skips them too)
             lo, hi = model.jnt_range[jnt]
             qposadr.append(int(model.jnt_qposadr[jnt]))
             dofadr.append(int(model.jnt_dofadr[jnt]))

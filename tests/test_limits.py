@@ -82,3 +82,25 @@ def test_limits_compose_by_tightening(arm_model):
     hi_np = hi.numpy()[0]
     # joint1 upper is min(config room 0.038, velocity room dt*0.1=0.002).
     assert hi_np[0] == pytest.approx(0.002, abs=1e-5)
+
+
+_BALL_XML = """
+<mujoco>
+  <worldbody>
+    <body pos="0 0 0.1">
+      <joint name="ball1" type="ball" limited="true" range="0 0.5"/>
+      <geom type="sphere" size="0.05"/>
+    </body>
+  </worldbody>
+</mujoco>
+"""
+
+
+def test_configuration_limit_rejects_limited_ball_joint():
+    import mujoco
+
+    # mink enforces limited ball joints; we don't yet, so fail loud rather
+    # than silently drop a hard limit.
+    model = mujoco.MjModel.from_xml_string(_BALL_XML)
+    with pytest.raises(NotImplementedError):
+        ConfigurationLimit(model)
