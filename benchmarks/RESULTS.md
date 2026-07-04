@@ -82,23 +82,32 @@ converges in ~1–2 iterations; L-BFGS starts from steepest descent and needs a 
 to ramp up). `|Δpos|` = world-0 tracked-frame distance to its target [m]; lower =
 tighter tracking, and is device-independent (float32, same math on CPU/GPU).
 
-Each scene runs under every backend below (`dls`/`lm`/`lbfgs`). `solves/s` = worlds
-× steps ÷ wall time; GPU batched columns use CUDA-graph capture (`dls`/`lm`; `lbfgs`
-is eager). Two regimes:
+Each scene (`panda`, `g1`) runs under every backend (`dls`/`lm`/`lbfgs`) at two
+target speeds (`--motion gentle|aggressive`). `solves/s` = worlds × steps ÷ wall
+time; GPU batched columns use CUDA-graph capture (`dls`/`lm`; `lbfgs` is eager).
 
-- **`panda`** (fixed base, gentle target) — DLS already converges each tick, so LM
-  only *matches* its accuracy (at ~3× the per-call cost) and L-BFGS trails.
-- **`g1`** (floating base, larger target motion) — LM tracks **~3× tighter** than
-  DLS (`|Δpos|` 9.6e-3 → 3.2e-3) because it takes full undamped Newton steps; on
-  GPU at 4096 worlds that costs only ~1.3× the throughput. L-BFGS underperforms on
-  this stiff floating-base problem (its line search stalls; more `--iters` doesn't
-  help). Optimizer backends also add robustness where a plain GN step overshoots —
-  ill-conditioned Jacobians or unreachable targets (an out-of-reach target winds an
-  undamped DLS arm through many revolutions while LM settles at the closest pose).
+The distinction is **how fast the target moves per control tick**:
+
+- **Gentle** (default) — the target creeps, so a single Gauss-Newton step per tick
+  already converges. Every backend tracks equally; LM/L-BFGS only cost throughput.
+- **Aggressive** — the target moves ~10× faster, so one linear step lags and LM's
+  re-linearization tracks visibly tighter (up to ~8× on `g1`). This is where the
+  optimizer backends earn their per-call cost.
+
+Across both, the optimizer backends also add robustness where a plain GN step
+overshoots — ill-conditioned Jacobians or unreachable targets (an out-of-reach
+target winds an undamped DLS arm through many revolutions while LM settles at the
+closest pose). L-BFGS trails on the stiff floating-base `g1` (its line search
+stalls; more `--iters` doesn't help), and suits well-conditioned redundant arms.
 
 CPU = Apple Silicon (eager); GPU = RTX 4070 Ti SUPER (1 world eager, batched CUDA graph).
 
-### `panda` (fixed base, `FrameTask` + `PostureTask`, nv=9)
+### Gentle motion (default trajectory)
+
+Target creeps ~3e-3 m/tick (`panda`) — one GN step already converges, so every
+backend tracks equally; the optimizer backends only cost throughput here.
+
+`panda` (fixed base, `FrameTask` + `PostureTask`, nv=9):
 
 | solver | iters | CPU 1w | CPU 256w | GPU 1w | GPU 4096w | `\|Δpos\|` mean | `\|Δpos\|` max |
 |---|--:|--:|--:|--:|--:|--:|--:|
@@ -106,7 +115,7 @@ CPU = Apple Silicon (eager); GPU = RTX 4070 Ti SUPER (1 world eager, batched CUD
 | lm    | 2 |   884 |  48,418 |   623 | 3,672,702 | 2.4e-4 | 8.2e-4 |
 | lbfgs | 5 |   118 |   8,148 |    84 |   344,084 | 3.3e-3 | 8.2e-3 |
 
-### `g1` (floating base, pelvis `FrameTask` + `PostureTask` + `ComTask`, nv=49)
+`g1` (floating base, pelvis `FrameTask` + `PostureTask` + `ComTask`, nv=49):
 
 | solver | iters | CPU 1w | CPU 256w | GPU 1w | GPU 4096w | `\|Δpos\|` mean | `\|Δpos\|` max |
 |---|--:|--:|--:|--:|--:|--:|--:|
@@ -114,10 +123,34 @@ CPU = Apple Silicon (eager); GPU = RTX 4070 Ti SUPER (1 world eager, batched CUD
 | lm    | 2 |   589 |  4,116 |   333 | 278,111 | **3.2e-3** | **4.2e-3** |
 | lbfgs | 5 |    98 |  1,662 |    75 | 223,299 | 4.1e-2 | 6.0e-2 |
 
+### Aggressive motion (`--motion aggressive`)
+
+Target moves ~10× faster (`panda` ~3e-2 m/tick, `g1` ~1.4e-2 m/tick). Now one GN
+step lags and LM's re-linearization pays off — dramatically on `g1`, where LM at
+iters=2 tracks **~8× tighter than DLS** for ~1.3× the GPU throughput at 4096
+worlds. L-BFGS still trails on these stiff/fast problems. Throughput is unchanged
+from gentle (same work per tick); only `|Δpos|` differs, so only it is shown.
+
+`panda`:
+
+| solver | iters | GPU 4096w (solves/s) | `\|Δpos\|` mean | `\|Δpos\|` max |
+|---|--:|--:|--:|--:|
+| dls   | 1 | 9,666,182 | 1.53e-2 | 7.49e-2 |
+| lm    | 2 | 3,718,200 | **1.37e-2** | **5.19e-2** |
+| lbfgs | 5 |   341,341 | 3.90e-2 | 9.95e-2 |
+
+`g1`:
+
+| solver | iters | GPU 4096w (solves/s) | `\|Δpos\|` mean | `\|Δpos\|` max |
+|---|--:|--:|--:|--:|
+| dls   | 1 | 371,722 | 3.77e-2 | 1.12e-1 |
+| lm    | 2 | 278,219 | **4.87e-3** | **9.25e-3** |
+| lbfgs | 5 | 223,687 | 7.75e-2 | 1.20e-1 |
+
 ```bash
-# any scene x any backend, throughput + tracking accuracy
-uv run python benchmarks/bench_solvers.py panda --nworld 256                    # CPU
-uv run python benchmarks/bench_solvers.py g1 --nworld 4096 --graph --device cuda:0
+# any scene x any backend x motion, throughput + tracking accuracy
+uv run python benchmarks/bench_solvers.py g1 --nworld 256                                    # CPU, gentle
+uv run python benchmarks/bench_solvers.py g1 --motion aggressive --nworld 4096 --graph --device cuda:0
 ```
 
 ### LM throughput sweep (`panda`, GPU, CUDA graph, iters=2)

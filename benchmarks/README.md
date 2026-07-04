@@ -46,7 +46,8 @@ uv run python benchmarks/bench_ik.py --compare cpu.json gpu.json # A/B speedup
 # Solver backends
 uv run python benchmarks/bench_ik.py --solver lm --graph          # LM throughput
 uv run python benchmarks/bench_solvers.py                         # dls/lm/lbfgs: speed vs accuracy
-uv run python benchmarks/bench_solvers.py --nworld 4096 --graph
+uv run python benchmarks/bench_solvers.py g1 --motion aggressive  # fast target: LM tracks tighter
+uv run python benchmarks/bench_solvers.py g1 --motion aggressive --nworld 4096 --graph --device cuda:0
 
 # Accuracy parity vs mink (DLS backend)
 uv run python benchmarks/bench_parity.py            # PASS/FAIL at --tol
@@ -57,12 +58,13 @@ uv run python benchmarks/bench_parity.py --steps 500 --tol 2e-3
 
 - **float32.** mink-warp solves in float32; mink in float64. Peak `|Δv|` parity is
   therefore ~1e-3 (mean ~1e-4), so `bench_parity` defaults to `--tol 5e-3`.
-- **Solver choice.** On the gentle `panda` target `dls` (1 GN step/tick) already
-  converges, so `lm` only matches it; on `g1` (floating base) `lm` tracks ~3× tighter
-  (`|Δpos|` 9.6e-3 → 3.2e-3) by taking full undamped Newton steps. `lm` converges in
-  ~1–2 iterations (default `iters=2`); `lbfgs` starts from steepest descent and needs
-  a few (default 5) but stalls on stiff problems like `g1`. Optimizer backends also
-  add robustness where a plain GN step overshoots (ill-conditioned Jacobians,
+- **Solver choice.** With a slow (`--motion gentle`) target `dls` (1 GN step/tick)
+  already converges, so `lm` only matches it. With a fast (`--motion aggressive`)
+  target a single step lags and `lm` tracks tighter — up to ~8× on `g1` (`|Δpos|`
+  3.8e-2 → 4.9e-3) — by taking full undamped Newton steps. `lm` converges in ~1–2
+  iterations (default `iters=2`); `lbfgs` starts from steepest descent, needs a few
+  (default 5), and stalls on stiff problems like `g1`. Optimizer backends also add
+  robustness where a plain GN step overshoots (ill-conditioned Jacobians,
   near-singular or unreachable targets). Raise `--iters` for harder problems. `lbfgs`
   runs eager only (per-candidate line search is not graph-capturable).
 - **CUDA graph.** `--graph` only engages on a CUDA device (and `dls`/`lm`); CPU runs eager.
