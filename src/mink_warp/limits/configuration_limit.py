@@ -18,7 +18,7 @@ import warp as wp
 
 from ..configuration import Configuration
 from ..exceptions import InvalidGain
-from ..kernels.constrained import config_limit_box
+from ..kernels.constrained import config_limit_box, config_limit_ineq
 from .limit import Limit
 
 _SCALAR_JOINTS = (mujoco.mjtJoint.mjJNT_HINGE, mujoco.mjtJoint.mjJNT_SLIDE)
@@ -64,6 +64,8 @@ class ConfigurationLimit(Limit):
         self.model = model
         self.gain = float(gain)
         self.n_limited = len(dofadr)
+        # Dense inequality form: mink's G=[P;-P] -> two rows per limited dof.
+        self.n_inequalities = 2 * self.n_limited
         self._qposadr_np = np.asarray(qposadr, dtype=np.int32)
         self._dofadr_np = np.asarray(dofadr, dtype=np.int32)
         self._lower_np = np.asarray(lower, dtype=np.float32)
@@ -110,4 +112,34 @@ class ConfigurationLimit(Limit):
                     self.n_limited,
                 ],
                 outputs=[lo, hi],
+            )
+
+    def scatter_inequalities(
+        self,
+        configuration: Configuration,
+        dt: float,
+        row_offset: int,
+        G: wp.array,
+        h: wp.array,
+    ) -> None:
+        del dt  # Configuration limits are timestep-independent.
+        if self.n_limited == 0:
+            return
+        device = configuration.device
+        qposadr, dofadr, lower, upper = self._ensure_dev(device)
+        with wp.ScopedDevice(device):
+            wp.launch(
+                config_limit_ineq,
+                dim=configuration.nworld,
+                inputs=[
+                    configuration.q,
+                    qposadr,
+                    dofadr,
+                    lower,
+                    upper,
+                    self.gain,
+                    self.n_limited,
+                    int(row_offset),
+                ],
+                outputs=[G, h],
             )

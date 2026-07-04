@@ -214,3 +214,207 @@ def launch_admm_box_solve(
         block_dim=TILE_THREADS,
         device=device,
     )
+
+
+# --------------------------------------------------------------------------- #
+# General dense inequality: G dq <= h  (OSQP-ADMM, factor-once)
+# --------------------------------------------------------------------------- #
+@wp.kernel
+def init_ineq(
+    G: wp.array3d[float],
+    h: wp.array2d[float],
+):
+    """Reset the padded inequality block to inert rows (``0 dq <= +inf``).
+
+    Launched over ``(nworld, m)``; zeroes the whole row of ``G`` and sets ``h``
+    to ``+BOX_INF`` so any row a limit does not overwrite is satisfied trivially
+    and contributes nothing to ``G^T G``.
+    """
+    worldid, i = wp.tid()
+    h[worldid, i] = BOX_INF
+    nv = G.shape[2]
+    for j in range(nv):
+        G[worldid, i, j] = 0.0
+
+
+@wp.kernel
+def config_limit_ineq(
+    q: wp.array2d[float],
+    qposadr: wp.array[int],
+    dofadr: wp.array[int],
+    lower: wp.array[float],
+    upper: wp.array[float],
+    gain: float,
+    n_limited: int,
+    row_offset: int,
+    G: wp.array3d[float],
+    h: wp.array2d[float],
+):
+    """Scatter mink's ``G=[P;-P]``, ``h=[gain*(upper-q); gain*(q-lower)]`` rows.
+
+    The same configuration limit the box kernel intersects, written instead as
+    ``2*n_limited`` explicit dense inequality rows starting at ``row_offset``
+    (the ``+P`` rows first, then the ``-P`` rows), for the general-inequality
+    solve path.
+    """
+    worldid = wp.tid()
+    for k in range(n_limited):
+        qa = qposadr[k]
+        va = dofadr[k]
+        qk = q[worldid, qa]
+        r_up = row_offset + k
+        r_lo = row_offset + n_limited + k
+        G[worldid, r_up, va] = 1.0
+        h[worldid, r_up] = gain * (upper[k] - qk)
+        G[worldid, r_lo, va] = -1.0
+        h[worldid, r_lo] = gain * (qk - lower[k])
+
+
+@wp.kernel
+def velocity_limit_ineq(
+    dofadr: wp.array[int],
+    vmax: wp.array[float],
+    dt: float,
+    nb: int,
+    row_offset: int,
+    G: wp.array3d[float],
+    h: wp.array2d[float],
+):
+    """Scatter the symmetric velocity limit as ``+-e_i dq <= dt*vmax`` rows."""
+    worldid = wp.tid()
+    for k in range(nb):
+        va = dofadr[k]
+        b = dt * vmax[k]
+        r_up = row_offset + k
+        r_lo = row_offset + nb + k
+        G[worldid, r_up, va] = 1.0
+        h[worldid, r_up] = b
+        G[worldid, r_lo, va] = -1.0
+        h[worldid, r_lo] = b
+
+
+@wp.kernel
+def linear_ineq_scatter(
+    Gc: wp.array2d[float],  # (m_rows, nv) constant rows
+    hc: wp.array[float],  # (m_rows,)
+    row_offset: int,
+    G: wp.array3d[float],
+    h: wp.array2d[float],
+):
+    """Broadcast constant dense rows ``Gc dq <= hc`` into every world's block."""
+    worldid, i = wp.tid()
+    nv = G.shape[2]
+    r = row_offset + i
+    h[worldid, r] = hc[i]
+    for j in range(nv):
+        G[worldid, r, j] = Gc[i, j]
+
+
+# Cache of (nv, m, iters)-specialised inequality-ADMM kernels.
+_ADMM_INEQ_CACHE: dict[tuple[int, int, int], Any] = {}
+
+
+def get_admm_ineq_kernel(nv: int, m: int, iters: int):
+    """Return a batched dense-inequality QP kernel specialised for ``(nv, m, iters)``.
+
+    Solves, one block per world via :func:`wp.launch_tiled`::
+
+        min  1/2 dq^T H dq + c^T dq   s.t.   G dq <= h
+
+    by the reduced (Schur-normal) OSQP-ADMM: the SPD normal matrix
+    ``M = H + sigma I + rho G^T G`` is factored once, then each of ``iters``
+    steps is a cached tile-Cholesky solve, a projection of the constraint image
+    ``G dq`` onto ``(-inf, h]``, and a dual update. Returns ``dq = x`` whose
+    feasibility ``G dq <= h`` tightens with ``iters`` (asymptotic, unlike the box
+    solver's exact-at-every-step projection). ``sigma > 0`` keeps ``M`` SPD.
+
+    Per-world vectors are stored as ``(n,)`` rows and reshaped to ``(n, 1)``
+    columns only where the two matmuls (``G x`` and ``G^T w``) need them.
+    """
+    key = (int(nv), int(m), int(iters))
+    if key in _ADMM_INEQ_CACHE:
+        return _ADMM_INEQ_CACHE[key]
+
+    NV = int(nv)
+    M = int(m)
+    ITERS = int(iters)
+
+    def _admm_ineq_solve(
+        H: wp.array3d[float],
+        b: wp.array2d[float],  # b = -c = W^T e
+        G: wp.array3d[float],  # (nworld, m, nv)
+        h: wp.array2d[float],  # (nworld, m)
+        rho: wp.array[float],  # per-world ADMM penalty
+        sigma: float,  # SPD floor added to M's diagonal
+        alpha: float,
+        dq: wp.array2d[float],
+    ):
+        worldid = wp.tid()
+        r = rho[worldid]
+
+        Hd = wp.tile_load(H[worldid], shape=(NV, NV))
+        Gt = wp.tile_load(G[worldid], shape=(M, NV))
+        ht = wp.tile_load(h[worldid], shape=(M,))
+        bt = wp.tile_load(b[worldid], shape=(NV,))
+
+        GT = wp.tile_transpose(Gt)  # (nv, m)
+        GtG = wp.tile_matmul(GT, Gt)  # (nv, nv)
+
+        # M = H + rho G^T G + sigma I, factored once.
+        dsig = wp.tile_ones(shape=(NV,), dtype=float) * sigma
+        Msys = wp.tile_diag_add(Hd + GtG * r, dsig)
+        L = wp.tile_cholesky(Msys)
+
+        # Warm start x = M^{-1} b; z = clip(G x, ., h); y = 0.
+        x = wp.tile_cholesky_solve(L, bt)  # (nv,)
+        xc = wp.tile_reshape(x, shape=(NV, 1))
+        z = wp.tile_reshape(wp.tile_matmul(Gt, xc), shape=(M,))  # G x  (m,)
+        z = wp.tile_map(_fmin, z, ht)
+        y = wp.tile_zeros(shape=(M,), dtype=float)
+
+        for _ in range(ITERS):
+            w1 = wp.tile_reshape(z * r - y, shape=(M, 1))
+            Gtw = wp.tile_reshape(wp.tile_matmul(GT, w1), shape=(NV,))  # G^T(rho z - y)
+            rhs = x * sigma + bt + Gtw
+            xt = wp.tile_cholesky_solve(L, rhs)  # (nv,)
+            xtc = wp.tile_reshape(xt, shape=(NV, 1))
+            zt = wp.tile_reshape(wp.tile_matmul(Gt, xtc), shape=(M,))  # G x_tilde
+            x = xt * alpha + x * (1.0 - alpha)
+            z_hat = zt * alpha + z * (1.0 - alpha)
+            t = z_hat + y * (1.0 / r)
+            z_new = wp.tile_map(_fmin, t, ht)  # project onto (-inf, h]
+            y = y + (z_hat - z_new) * r
+            z = z_new
+
+        wp.tile_store(dq[worldid], x)
+
+    _admm_ineq_solve.__name__ = f"admm_ineq_solve_{NV}_{M}_{ITERS}"
+    _admm_ineq_solve.__qualname__ = _admm_ineq_solve.__name__
+    kernel = wp.kernel(enable_backward=False, module="unique")(_admm_ineq_solve)
+    _ADMM_INEQ_CACHE[key] = kernel
+    return kernel
+
+
+def launch_admm_ineq_solve(
+    kernel,
+    *,
+    nworld: int,
+    H: wp.array,
+    b: wp.array,
+    G: wp.array,
+    h: wp.array,
+    rho: wp.array,
+    sigma: float,
+    alpha: float,
+    dq: wp.array,
+    device: str | None = None,
+) -> None:
+    """Launch the dense-inequality ADMM solve: one block per world."""
+    wp.launch_tiled(
+        kernel,
+        dim=[nworld],
+        inputs=[H, b, G, h, rho, sigma, alpha],
+        outputs=[dq],
+        block_dim=TILE_THREADS,
+        device=device,
+    )
