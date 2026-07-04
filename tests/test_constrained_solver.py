@@ -194,16 +194,20 @@ def test_constrained_prevents_unconstrained_violation(arm_model):
     cfg = mw.Configuration(arm_model, q=q, nworld=1, device=_CUDA)
     task, _ = _posture_pushing_past_limit(arm_model, q, q_target)
 
+    hi_lim = float(arm_model.jnt_range[0][1])  # joint1 upper limit (3.14)
+
     # Unconstrained DLS would drive joint1 past its +limit.
     dls = mw.DLSSolver(cfg, damping=1e-6)
     v_unc = dls.solve([task], DT).numpy()[0]
-    assert (q + v_unc * DT)[0] > 3.0 + 1e-3
+    assert (q + v_unc * DT)[0] > hi_lim + 1e-3
 
     cs = mw.ConstrainedSolver(
         cfg, limits=[mw.ConfigurationLimit(arm_model, gain=GAIN)], admm_iters=40
     )
     v_con = cs.solve([task], DT).numpy()[0]
-    assert (q + v_con * DT)[0] <= 3.0
+    # Constrained step keeps joint1 inside the limit (strictly, since gain < 1).
+    assert (q + v_con * DT)[0] <= hi_lim + 1e-5
+    assert (q + v_con * DT)[0] < (q + v_unc * DT)[0]
 
 
 @requires_cuda
