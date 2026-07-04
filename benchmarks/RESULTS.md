@@ -179,6 +179,12 @@ at `admm_iters=1` or when the target drives the arm hard into a bound — unlike
 the soft `JointLimitTask` penalty. `ρ = ρ_scale·√(min·max diag H)` self-scales
 across scenes; default `admm_iters=30`, `ρ_scale=1.0`.
 
+When a target is ramped straight past the joint limits, the unconstrained `dls`
+step follows it into the forbidden zone while the constrained solver clamps at
+the limit — its per-step overshoot is exactly 0:
+
+![Constrained IK never surpasses joint limits](figures/limits_demo.png)
+
 **Accuracy vs mink** (`daqp` + `ConfigurationLimit`, world 0, lockstep): `|Δv|`
 reaches the float32 parity floor (~6e-4, same as the unconstrained DLS floor) by
 `admm_iters≈30`. Feasibility is exact at *any* iteration count.
@@ -204,6 +210,12 @@ relatively free on the larger model).
 | g1 (nv=49)    | 256  |     24,800 |    24,530 | 1.01× | 2.24 rad | **0** |
 | g1 (nv=49)    | 1024 |     96,851 |    95,761 | 1.01× | 2.24 rad | **0** |
 | g1 (nv=49)    | 4096 |    374,662 |   357,958 | 1.05× | 2.24 rad | **0** |
+
+![Constrained solver performance](figures/constrained_performance.png)
+
+Throughput tracks `dls` (factor-once ADMM), the per-solve overhead shrinks with
+model size (1.08–1.33× on panda nv=9, 1.01–1.05× on g1 nv=49), and accuracy vs
+mink `daqp` reaches the float32 parity floor (~6e-4) by `admm_iters≈30`.
 
 ```bash
 # accuracy sweep vs mink (parity scene), and throughput + violation vs dls
