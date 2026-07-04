@@ -40,7 +40,9 @@ class LBFGSSolver(Solver):
     Args:
         history: number ``m`` of ``(s, y)`` pairs retained.
         line_search: candidate step sizes evaluated in parallel each iteration.
-        eps: curvature / sufficient-decrease floor.
+        eps: sufficient-decrease floor for the line search.
+        curvature_eps: relative curvature floor ``s.y > curvature_eps * ||y||^2``
+            below which a pair is skipped (kept out of the history).
     """
 
     name = "lbfgs"
@@ -51,6 +53,7 @@ class LBFGSSolver(Solver):
         history: int = 6,
         line_search: Sequence[float] = DEFAULT_LINE_SEARCH,
         eps: float = 1e-16,
+        curvature_eps: float = 1e-8,
     ):
         super().__init__(configuration)
         if history < 1:
@@ -60,6 +63,7 @@ class LBFGSSolver(Solver):
         if not self.alphas:
             raise ValueError("line_search must contain at least one step size")
         self.eps = float(eps)
+        self.curvature_eps = float(curvature_eps)
 
         nworld = configuration.nworld
         nv = configuration.nv
@@ -137,7 +141,8 @@ class LBFGSSolver(Solver):
                     slot = count
                     count += 1
                 wp.launch(push_history, dim=nworld,
-                          inputs=[self.step, self.g, self.g_new, slot, self.eps, nv],
+                          inputs=[self.step, self.g, self.g_new, slot,
+                                  self.curvature_eps, nv],
                           outputs=[self.s_hist, self.y_hist, self.rho_hist])
                 wp.copy(self.g, self.g_new)
                 wp.copy(self.C_old, self.C_new)

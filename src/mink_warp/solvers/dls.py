@@ -80,8 +80,12 @@ class DLSSolver(Solver):
         damping: float | None = None,
     ) -> wp.array:
         """Solve and integrate ``iterations`` times; returns last velocity."""
+        self._check_dt(dt)
+        if iterations < 1:
+            raise ValueError(f"iterations must be >= 1, got {iterations}")
         damping = self._damping(damping)
-        if use_graph and iterations == 1 and wp.get_device().is_cuda:
+        if (use_graph and iterations == 1
+                and wp.get_device(self.configuration.device).is_cuda):
             self._ensure_graph(tasks, dt, damping)
             if self._graph is not None:
                 wp.capture_launch(self._graph)
@@ -121,6 +125,8 @@ class DLSSolver(Solver):
         # Host->device dt write must happen outside the graph.
         self.configuration.set_integration_dt(dt)
 
+        # Snapshot the pristine config: the warmup below integrates one real step.
+        q_snapshot = wp.clone(self.configuration.q)
         # Warm up kernels and allocate all task buffers before capture.
         self._solve_device(tasks, dt, damping)
         self.configuration.integrate_inplace(self.v, dt=None)
@@ -133,6 +139,11 @@ class DLSSolver(Solver):
         self._graph_tasks = task_key
         self._graph_dt = dt
         self._graph_damping = damping
+        # Undo the warmup + capture advances so capture_launch replays from the
+        # pristine configuration (otherwise the first graphed call double-steps).
+        with wp.ScopedDevice(self.configuration.device):
+            wp.copy(self.configuration.q, q_snapshot)
+            self.configuration.update()
 
     def _solve_device(
         self,

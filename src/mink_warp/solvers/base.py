@@ -24,8 +24,16 @@ class Solver(abc.ABC):
     """Batched IK solver operating on a shared :class:`Configuration`.
 
     Contract: :meth:`solve_and_integrate` advances the configuration toward the
-    task targets and returns a representative tangent velocity ``(nworld, nv)``
-    whose integral over ``dt`` equals the net configuration change of the call.
+    task targets and returns a representative tangent velocity ``(nworld, nv)``.
+
+    For multi-iteration backends (LM / L-BFGS) the returned ``v`` is the sum of
+    the per-iteration tangent steps divided by ``dt``. Re-integrating ``v`` over
+    ``dt`` reproduces the optimized configuration exactly for Euclidean joints
+    (hinge / slide); for free / ball joints it agrees to second order (the true
+    update is a composition of manifold exponentials, ``v`` their tangent sum).
+    The configuration itself is always left at the exact optimized state.
+    A solver is bound to its configuration's ``nworld`` / ``nv`` and cannot be
+    reused with a differently sized one.
     """
 
     #: Registry key / human label.

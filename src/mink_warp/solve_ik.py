@@ -34,7 +34,7 @@ def solve_ik(
     configuration: Configuration,
     tasks: Sequence[Task],
     dt: float,
-    damping: float = 1e-12,
+    damping: float | None = None,
     *,
     solver: Solver | None = None,
 ) -> wp.array:
@@ -43,6 +43,9 @@ def solve_ik(
     With the default (or any :class:`DLSSolver`) this is a pure velocity solve
     that does **not** mutate the configuration. Optimizer backends (LM / L-BFGS)
     advance the configuration and return the equivalent tangent velocity.
+
+    ``damping=None`` uses the solver's own default (a supplied ``DLSSolver``
+    keeps its configured damping); pass a float to override it for this call.
     """
     if solver is None:
         solver = DLSSolver(configuration)
@@ -65,7 +68,9 @@ def solve_ik_iterations(
     """Run ``iterations`` solve+integrate steps; returns final ``q``."""
     if solver is None:
         solver = DLSSolver(configuration)
+    elif solver.configuration is not configuration:
+        raise ValueError("solver was created for a different Configuration")
     solver.solve_and_integrate(
         tasks, dt, damping=damping, iterations=iterations
     )
-    return configuration.q
+    return solver.configuration.q

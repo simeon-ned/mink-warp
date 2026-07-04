@@ -54,7 +54,7 @@ def test_unknown_solver_raises(arm_model):
         mw.make_solver(cfg, "nope")
 
 
-@pytest.mark.parametrize("kind", OPTIMIZERS)
+@pytest.mark.parametrize("kind", ALL_KINDS)
 def test_iterations_must_be_positive(arm_model, kind):
     cfg = mw.Configuration(arm_model, nworld=1)
     frame = mw.FrameTask("ee", "site", position_cost=1.0, orientation_cost=1.0)
@@ -136,6 +136,28 @@ def test_batched_worlds_are_independent(arm_model, kind):
 
 
 # --- LM reduces to the Gauss-Newton step -----------------------------------
+
+
+@pytest.mark.parametrize("kind", ["dls", "lm"])
+def test_graph_capture_matches_eager(arm_model, kind):
+    """CUDA-graph capture must not double-advance the configuration (first call)."""
+    import warp as wp
+
+    if not wp.get_device().is_cuda:
+        pytest.skip("CUDA graph capture requires a CUDA device")
+
+    q0 = arm_model.key_qpos[0].copy()
+    finals = {}
+    for use_graph in (False, True):
+        cfg = mw.Configuration(arm_model, q=q0, nworld=1)
+        frame = mw.FrameTask("ee", "site", position_cost=1.0, orientation_cost=0.0)
+        tgt = _reachable_target(cfg)
+        frame.set_target(tgt, configuration=cfg)
+        solver = mw.make_solver(cfg, kind)
+        # A single call so the graph branch is the very first (build + launch).
+        solver.solve_and_integrate([frame], 0.01, iterations=1, use_graph=use_graph)
+        finals[use_graph] = cfg.q.numpy().copy()
+    np.testing.assert_allclose(finals[True], finals[False], atol=1e-6)
 
 
 def test_lm_first_step_matches_dls_gauss_newton(arm_model):

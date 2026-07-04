@@ -140,9 +140,9 @@ def lm_accept(
     worldid = wp.tid()
     p = pred[worldid]
     actual = C_old[worldid] - C_new[worldid]
-    rho = float(-1.0)
-    if p > eps:
-        rho = actual / p
+    # Regularized gain ratio: pred >= 0, so (pred + eps) > 0 avoids the float32
+    # noise of dividing by a near-zero predicted reduction at convergence.
+    rho = actual / (p + eps)
 
     if rho > 0.0:
         for i in range(nv):

@@ -178,13 +178,20 @@ def push_history(
     y_hist: wp.array3d[float],
     rho_hist: wp.array2d[float],
 ):
-    """Store ``(s, y)`` if curvature ``s.y > eps``, else a zero (no-op) slot."""
+    """Store ``(s, y)`` if curvature ``s.y > eps ||y||^2``, else a zero slot.
+
+    Relative test (standard L-BFGS skip rule): an absolute floor would admit a
+    near-orthogonal pair with tiny ``s.y``, giving ``rho = 1/(s.y)`` huge and a
+    garbage two-loop direction that pollutes the history for up to ``m`` steps.
+    """
     worldid = wp.tid()
     sy = float(0.0)
+    yy = float(0.0)
     for i in range(nv):
         yi = g_new[worldid, i] - g_old[worldid, i]
         sy += step[worldid, i] * yi
-    if sy > eps:
+        yy += yi * yi
+    if sy > eps * yy:
         for i in range(nv):
             s_hist[worldid, slot, i] = step[worldid, i]
             y_hist[worldid, slot, i] = g_new[worldid, i] - g_old[worldid, i]

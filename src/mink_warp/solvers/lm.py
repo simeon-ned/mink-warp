@@ -40,8 +40,8 @@ class LMSolver(Solver):
     Args:
         lambda0: initial damping (reset at the start of every call).
         lambda_min / lambda_max: clamp range for the adaptive damping.
-        eps: predicted-reduction floor below which a step is treated as a
-            reject (avoids division blow-up near convergence).
+        eps: gain-ratio regularizer added to the predicted reduction, so a
+            near-zero prediction at convergence does not amplify float32 noise.
     """
 
     name = "lm"
@@ -52,7 +52,7 @@ class LMSolver(Solver):
         lambda0: float = 1e-2,
         lambda_min: float = 1e-9,
         lambda_max: float = 1e9,
-        eps: float = 1e-16,
+        eps: float = 1e-8,
     ):
         super().__init__(configuration)
         self.lambda0 = float(lambda0)
@@ -94,7 +94,7 @@ class LMSolver(Solver):
             raise ValueError(f"iterations must be >= 1, got {iterations}")
         self._reset()
 
-        if use_graph and wp.get_device().is_cuda:
+        if use_graph and wp.get_device(self.configuration.device).is_cuda:
             self._ensure_graph(tasks, dt, iterations)
             if self._graph is not None:
                 wp.capture_launch(self._graph)
@@ -184,6 +184,9 @@ class LMSolver(Solver):
         cfg = self.configuration
         # Unit dt for the delta integrates lives on device; set outside capture.
         cfg.set_integration_dt(1.0)
+        # Snapshot the pristine configuration: the warmup below runs real
+        # iterations that advance cfg.q and accumulate dq_total.
+        q_snapshot = wp.clone(cfg.q)
         # Warm up all kernels / buffers before capture.
         for _ in range(iterations):
             self._iteration(tasks, unit_dt=None)
@@ -194,3 +197,9 @@ class LMSolver(Solver):
             self._finalize_velocity(dt)
         self._graph = capture.graph
         self._graph_key = key
+        # Undo the warmup + capture advances and re-zero the accumulators so the
+        # caller's capture_launch replays from the pristine post-reset state.
+        with wp.ScopedDevice(cfg.device):
+            wp.copy(cfg.q, q_snapshot)
+            cfg.update()
+        self._reset()

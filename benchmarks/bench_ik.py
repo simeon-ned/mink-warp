@@ -46,7 +46,8 @@ def run_batch(scene_key: str, nworld: int, steps: int, warmup: int,
     solver = mw.make_solver(s["configuration"], solver_kind, **kw)
 
     graph = (use_graph and wp.get_device(device).is_cuda
-             and solver_kind in _GRAPH_CAPABLE)
+             and solver_kind in _GRAPH_CAPABLE
+             and (solver_kind != "dls" or iters == 1))
     times_us: list[float] = []
     t = 0.0
     for i in range(warmup + steps):

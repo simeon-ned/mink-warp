@@ -122,13 +122,13 @@ class Task(abc.ABC):
         self._eval(configuration)
         assert self._error is not None
         assert self._jacobian is not None
-        assert self._cost_dev is not None
         assert self._weighted_jac is not None
         assert self._weighted_err is not None
         assert self._mu is not None
         with wp.ScopedDevice(configuration.device):
-            if self._cost_dev is None:
-                self._cost_dev = wp.array(self.cost.astype(np.float32), dtype=float)
+            # Refresh the device cost buffer if a cost setter nulled it
+            # (same path the LM / L-BFGS accessors take).
+            self._ensure_cost_dev(configuration)
             wp.launch(
                 weighted_residual,
                 dim=configuration.nworld,
