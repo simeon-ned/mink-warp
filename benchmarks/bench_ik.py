@@ -24,24 +24,35 @@ import warp as wp
 from common import summarize, sync, throughput
 from scenes import DT, SCENES
 
+import mink_warp as mw
+
 _ns = time.perf_counter_ns
+
+# L-BFGS does per-candidate line-search step sizes -> no CUDA graph capture.
+_GRAPH_CAPABLE = {"dls", "lm"}
+_DEFAULT_ITERS = {"dls": 1, "lm": 5, "lbfgs": 5}
 
 
 def run_batch(scene_key: str, nworld: int, steps: int, warmup: int,
-              use_graph: bool, device: str | None) -> dict:
+              use_graph: bool, device: str | None,
+              solver_kind: str = "dls", iters: int | None = None) -> dict:
     scene = SCENES[scene_key]
     s = scene.setup_mw(nworld, device=device)
-    solver = s["solver"]
     tasks, damping = s["tasks"], s["damping"]
+    if iters is None:
+        iters = _DEFAULT_ITERS[solver_kind]
 
-    graph = use_graph and wp.get_device(device).is_cuda
+    kw = {"damping": damping} if solver_kind == "dls" else {}
+    solver = mw.make_solver(s["configuration"], solver_kind, **kw)
+
+    graph = (use_graph and wp.get_device(device).is_cuda
+             and solver_kind in _GRAPH_CAPABLE)
     times_us: list[float] = []
     t = 0.0
     for i in range(warmup + steps):
         t0 = _ns()
         scene.update_mw(s, t)
-        solver.solve_and_integrate(tasks, DT, damping=damping, iterations=1,
-                                   use_graph=graph)
+        solver.solve_and_integrate(tasks, DT, iterations=iters, use_graph=graph)
         sync(device)
         if i >= warmup:
             times_us.append((_ns() - t0) * 1e-3)
@@ -52,6 +63,8 @@ def run_batch(scene_key: str, nworld: int, steps: int, warmup: int,
     stats["per_solve_us"] = stats["mean"] / nworld
     stats["solves_per_s"] = throughput(stats["mean"] * 1e-6, nworld)
     stats["graph"] = graph
+    stats["solver"] = solver_kind
+    stats["iters"] = iters
     return stats
 
 
@@ -60,8 +73,10 @@ def print_row(st: dict) -> None:
           f"{st['per_solve_us']:>11.2f}  {st['solves_per_s']:>13.0f}")
 
 
-def print_header(scene_key: str, device: str, graph: bool) -> None:
-    print(f"\n  scene={scene_key}  device={device}  graph={graph}  dt={DT * 1000:.1f} ms")
+def print_header(scene_key: str, device: str, graph: bool,
+                 solver: str, iters: int) -> None:
+    print(f"\n  scene={scene_key}  device={device}  solver={solver}  "
+          f"iters={iters}  graph={graph}  dt={DT * 1000:.1f} ms")
     print(f"  {'nworld':>6s}  {'step_us':>11s}  {'median_us':>11s}  "
           f"{'us/solve':>11s}  {'solves/s':>13s}")
     print(f"  {'-' * 6}  {'-' * 11}  {'-' * 11}  {'-' * 11}  {'-' * 13}")
@@ -85,7 +100,11 @@ def main() -> None:
                     default=[1, 16, 64, 256, 1024, 4096])
     ap.add_argument("--steps", type=int, default=200)
     ap.add_argument("--warmup", type=int, default=50)
-    ap.add_argument("--graph", action="store_true", help="Capture a CUDA graph (GPU only).")
+    ap.add_argument("--solver", default="dls", choices=["dls", "lm", "lbfgs"],
+                    help="IK backend (default: dls).")
+    ap.add_argument("--iters", type=int, default=None,
+                    help="inner iterations/call (default: dls=1, lm/lbfgs=5).")
+    ap.add_argument("--graph", action="store_true", help="Capture a CUDA graph (GPU, dls/lm only).")
     ap.add_argument("--device", default=None, help="warp device, e.g. 'cuda:0' or 'cpu'.")
     ap.add_argument("--save", type=str)
     ap.add_argument("--compare", nargs=2, metavar=("A", "B"))
@@ -99,10 +118,12 @@ def main() -> None:
         return
 
     device = args.device or str(wp.get_device())
-    print_header(args.scene, device, args.graph)
+    iters = args.iters if args.iters is not None else _DEFAULT_ITERS[args.solver]
+    print_header(args.scene, device, args.graph, args.solver, iters)
     results: dict[str, dict] = {}
     for b in args.batches:
-        st = run_batch(args.scene, b, args.steps, args.warmup, args.graph, args.device)
+        st = run_batch(args.scene, b, args.steps, args.warmup, args.graph,
+                       args.device, args.solver, args.iters)
         results[str(b)] = st
         print_row(st)
     print()

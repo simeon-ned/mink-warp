@@ -1,4 +1,9 @@
-"""Batched differential inverse kinematics."""
+"""Batched differential inverse kinematics — thin API over the solver backends.
+
+``IKSolver`` is the damped-least-squares backend (Mink's differential step) and
+stays the default. See :mod:`mink_warp.solvers` for the Levenberg-Marquardt and
+L-BFGS backends, all sharing the :class:`~mink_warp.solvers.base.Solver` API.
+"""
 
 from __future__ import annotations
 
@@ -7,176 +12,22 @@ from collections.abc import Sequence
 import warp as wp
 
 from .configuration import Configuration
-from .kernels.solver import (
-    accumulate_normal_equations,
-    add_damping_diag,
-    get_cholesky_solve_kernel,
-    launch_cholesky_solve,
-    neg_vec,
-    scale_velocity,
-    zero_normal_equations,
-)
+from .solvers import DLSSolver, LBFGSSolver, LMSolver, Solver, make_solver
 from .tasks.task import Task
 
+# Backward-compatible default: the original mink-warp solver is damped LS.
+IKSolver = DLSSolver
 
-class IKSolver:
-    """Reusable batched DLS IK solver.
-
-    Solves :math:`(W^T W + \\lambda I)\\Delta q = -W^T e` on device and returns
-    :math:`v = \\Delta q / dt`. Optional CUDA graph capture for fixed task sets.
-
-    Note: CUDA graphs cannot include host→device copies. ``dt`` is written to a
-    device buffer before capture; integrate is out-of-place (in-place qpos
-    aliasing is not graph-safe).
-    """
-
-    def __init__(self, configuration: Configuration):
-        self.configuration = configuration
-        nworld = configuration.nworld
-        nv = configuration.nv
-        with wp.ScopedDevice(configuration.device):
-            self.H = wp.zeros((nworld, nv, nv), dtype=float)
-            self.c = wp.zeros((nworld, nv), dtype=float)
-            self.mu_total = wp.zeros(nworld, dtype=float)
-            self.rhs = wp.zeros((nworld, nv), dtype=float)
-            self.dq = wp.zeros((nworld, nv), dtype=float)
-            self.v = wp.zeros((nworld, nv), dtype=float)
-        # Newton-style tile Cholesky, specialized for this model's nv.
-        self._cholesky_solve = get_cholesky_solve_kernel(nv)
-        self._graph = None
-        self._graph_tasks: tuple[Task, ...] | None = None
-        self._graph_dt: float | None = None
-        self._graph_damping: float | None = None
-
-    def solve(
-        self,
-        tasks: Sequence[Task],
-        dt: float,
-        damping: float = 1e-12,
-    ) -> wp.array:
-        if dt <= 0.0:
-            raise ValueError(f"dt must be > 0, got {dt}")
-        self._solve_device(tasks, dt, damping)
-        return self.v
-
-    def solve_and_integrate(
-        self,
-        tasks: Sequence[Task],
-        dt: float,
-        damping: float = 1e-12,
-        iterations: int = 1,
-        *,
-        use_graph: bool = False,
-    ) -> wp.array:
-        """Solve and integrate ``iterations`` times; returns last velocity."""
-        if use_graph and iterations == 1 and wp.get_device().is_cuda:
-            self._ensure_graph(tasks, dt, damping)
-            if self._graph is not None:
-                wp.capture_launch(self._graph)
-                return self.v
-
-        v = self.v
-        for _ in range(iterations):
-            v = self.solve(tasks, dt, damping=damping)
-            self.configuration.integrate_inplace(v, dt)
-        return v
-
-    def invalidate_graph(self) -> None:
-        """Drop a captured CUDA graph (e.g. after changing the task list)."""
-        self._graph = None
-        self._graph_tasks = None
-        self._graph_dt = None
-        self._graph_damping = None
-
-    def _ensure_graph(
-        self,
-        tasks: Sequence[Task],
-        dt: float,
-        damping: float,
-    ) -> None:
-        task_key = tuple(tasks)
-        if (
-            self._graph is not None
-            and self._graph_tasks == task_key
-            and self._graph_dt == dt
-            and self._graph_damping == damping
-        ):
-            return
-
-        # Host→device dt write must happen outside the graph.
-        self.configuration.set_integration_dt(dt)
-
-        # Warm up kernels and allocate all task buffers before capture.
-        self._solve_device(tasks, dt, damping)
-        self.configuration.integrate_inplace(self.v, dt=None)
-
-        with wp.ScopedCapture() as capture:
-            self._solve_device(tasks, dt, damping)
-            # dt already on device; do not host-assign inside the graph.
-            self.configuration.integrate_inplace(self.v, dt=None)
-        self._graph = capture.graph
-        self._graph_tasks = task_key
-        self._graph_dt = dt
-        self._graph_damping = damping
-
-    def _solve_device(
-        self,
-        tasks: Sequence[Task],
-        dt: float,
-        damping: float,
-    ) -> None:
-        cfg = self.configuration
-        nv = cfg.nv
-        nworld = cfg.nworld
-        with wp.ScopedDevice(cfg.device):
-            wp.launch(
-                zero_normal_equations,
-                dim=nworld,
-                inputs=[self.H, self.c, self.mu_total, nv],
-            )
-            for task in tasks:
-                W, e, mu = task.compute_residual(cfg)
-                k = int(W.shape[1])
-                wp.launch(
-                    accumulate_normal_equations,
-                    dim=nworld,
-                    inputs=[W, e, mu, k, nv, self.H, self.c, self.mu_total],
-                )
-            wp.launch(
-                add_damping_diag,
-                dim=(nworld, nv),
-                inputs=[self.H, self.mu_total, float(damping), nv],
-            )
-            wp.launch(
-                neg_vec,
-                dim=nworld,
-                inputs=[self.c, nv],
-                outputs=[self.rhs],
-            )
-            launch_cholesky_solve(
-                self._cholesky_solve,
-                nworld=nworld,
-                H=self.H,
-                rhs=self.rhs,
-                dq=self.dq,
-            )
-            wp.launch(
-                scale_velocity,
-                dim=nworld,
-                inputs=[self.dq, float(dt), nv],
-                outputs=[self.v],
-            )
-
-    def step(
-        self,
-        tasks: Sequence[Task],
-        dt: float,
-        damping: float = 1e-12,
-        iterations: int = 1,
-    ) -> wp.array:
-        return self.solve_and_integrate(
-            tasks, dt, damping=damping, iterations=iterations
-        )
+__all__ = [
+    "IKSolver",
+    "DLSSolver",
+    "LMSolver",
+    "LBFGSSolver",
+    "Solver",
+    "make_solver",
+    "solve_ik",
+    "solve_ik_iterations",
+]
 
 
 def solve_ik(
@@ -185,14 +36,21 @@ def solve_ik(
     dt: float,
     damping: float = 1e-12,
     *,
-    solver: IKSolver | None = None,
+    solver: Solver | None = None,
 ) -> wp.array:
-    """Solve one differential-IK step; returns velocity ``(nworld, nv)``."""
+    """Solve one differential-IK step; returns velocity ``(nworld, nv)``.
+
+    With the default (or any :class:`DLSSolver`) this is a pure velocity solve
+    that does **not** mutate the configuration. Optimizer backends (LM / L-BFGS)
+    advance the configuration and return the equivalent tangent velocity.
+    """
     if solver is None:
-        solver = IKSolver(configuration)
+        solver = DLSSolver(configuration)
     elif solver.configuration is not configuration:
-        raise ValueError("IKSolver was created for a different Configuration")
-    return solver.solve(tasks, dt, damping=damping)
+        raise ValueError("solver was created for a different Configuration")
+    if isinstance(solver, DLSSolver):
+        return solver.solve(tasks, dt, damping=damping)
+    return solver.solve_and_integrate(tasks, dt)
 
 
 def solve_ik_iterations(
@@ -202,10 +60,12 @@ def solve_ik_iterations(
     iterations: int = 10,
     damping: float = 1e-2,
     *,
-    solver: IKSolver | None = None,
+    solver: Solver | None = None,
 ) -> wp.array:
-    """Run ``iterations`` DLS steps with integration; returns final ``q``."""
+    """Run ``iterations`` solve+integrate steps; returns final ``q``."""
     if solver is None:
-        solver = IKSolver(configuration)
-    solver.solve_and_integrate(tasks, dt, damping=damping, iterations=iterations)
+        solver = DLSSolver(configuration)
+    solver.solve_and_integrate(
+        tasks, dt, damping=damping, iterations=iterations
+    )
     return configuration.q

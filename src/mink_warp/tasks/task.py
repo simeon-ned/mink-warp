@@ -84,6 +84,36 @@ class Task(abc.ABC):
         assert self._jacobian is not None
         return self._jacobian
 
+    def _ensure_cost_dev(self, configuration: Configuration) -> wp.array:
+        if self._cost_dev is None:
+            with wp.ScopedDevice(configuration.device):
+                self._cost_dev = wp.array(self.cost.astype(np.float32), dtype=float)
+        return self._cost_dev
+
+    def error_jacobian_cost(
+        self, configuration: Configuration
+    ) -> tuple[wp.array, wp.array, wp.array]:
+        """Raw ``(error, jacobian, cost)`` after a single ``_eval``.
+
+        Used by the optimizer solvers (LM / L-BFGS), which own their damping and
+        therefore need the unweighted, non-negated residual — not the
+        ``gain``/``lm_damping``-shaped :meth:`compute_residual`.
+        """
+        self._ensure_buffers(configuration)
+        self._eval(configuration)
+        assert self._error is not None
+        assert self._jacobian is not None
+        return self._error, self._jacobian, self._ensure_cost_dev(configuration)
+
+    def error_cost(
+        self, configuration: Configuration
+    ) -> tuple[wp.array, wp.array]:
+        """Raw ``(error, cost)`` after a single ``_eval`` (trial-cost evaluation)."""
+        self._ensure_buffers(configuration)
+        self._eval(configuration)
+        assert self._error is not None
+        return self._error, self._ensure_cost_dev(configuration)
+
     def compute_residual(
         self, configuration: Configuration
     ) -> tuple[wp.array, wp.array, wp.array]:

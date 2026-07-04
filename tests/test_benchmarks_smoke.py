@@ -38,6 +38,19 @@ def test_scene_setup_and_step(key):
     assert np.isfinite(arr).all()
 
 
+@pytest.mark.parametrize("kind", ["dls", "lm", "lbfgs"])
+def test_bench_ik_run_batch_each_solver(kind):
+    import bench_ik  # noqa: E402
+
+    st = bench_ik.run_batch("panda", nworld=2, steps=3, warmup=1,
+                            use_graph=False, device=None,
+                            solver_kind=kind, iters=2)
+    assert st["solver"] == kind
+    assert st["nworld"] == 2
+    assert st["solves_per_s"] > 0.0
+    assert np.isfinite(st["mean"])
+
+
 def test_panda_parity_small():
     pytest.importorskip("mink")
     import qpsolvers

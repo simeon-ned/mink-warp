@@ -20,6 +20,11 @@ from .lie import SO3 as SO3
 from .solve_ik import IKSolver as IKSolver
 from .solve_ik import solve_ik as solve_ik
 from .solve_ik import solve_ik_iterations as solve_ik_iterations
+from .solvers import DLSSolver as DLSSolver
+from .solvers import LBFGSSolver as LBFGSSolver
+from .solvers import LMSolver as LMSolver
+from .solvers import Solver as Solver
+from .solvers import make_solver as make_solver
 from .tasks import ComTask as ComTask
 from .tasks import ConfigurationLimitTask as ConfigurationLimitTask
 from .tasks import DampingTask as DampingTask
