@@ -49,6 +49,18 @@ uv run examples/batched_g1_ik.py
 
 Assets: `examples/franka_emika_panda/`, `examples/unitree_g1/` (vendored from Mink).
 
+## Benchmarks
+
+Batched throughput and CPU-vs-mink accuracy parity (see `benchmarks/README.md`):
+
+```bash
+uv sync --extra dev
+uv run python benchmarks/bench_ik.py            # solves/sec vs batch size
+uv run python benchmarks/bench_parity.py        # agreement with mink (oracle)
+```
+
+See `benchmarks/RESULTS.md` for current CPU + GPU numbers.
+
 ## License
 
 Apache-2.0
