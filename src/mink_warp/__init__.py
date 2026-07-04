@@ -17,9 +17,13 @@ from .exceptions import UnsupportedFrame as UnsupportedFrame
 from .interop import to_wp as to_wp
 from .lie import SE3 as SE3
 from .lie import SO3 as SO3
+from .limits import ConfigurationLimit as ConfigurationLimit
+from .limits import Limit as Limit
+from .limits import VelocityLimit as VelocityLimit
 from .solve_ik import IKSolver as IKSolver
 from .solve_ik import solve_ik as solve_ik
 from .solve_ik import solve_ik_iterations as solve_ik_iterations
+from .solvers import ConstrainedSolver as ConstrainedSolver
 from .solvers import DLSSolver as DLSSolver
 from .solvers import LBFGSSolver as LBFGSSolver
 from .solvers import LMSolver as LMSolver

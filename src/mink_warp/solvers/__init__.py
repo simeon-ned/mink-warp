@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from ..configuration import Configuration
 from .base import Solver
+from .constrained import ConstrainedSolver
 from .dls import DLSSolver
 from .lbfgs import LBFGSSolver
 from .lm import LMSolver
@@ -20,13 +21,18 @@ SOLVERS: dict[str, type[Solver]] = {
     DLSSolver.name: DLSSolver,
     LMSolver.name: LMSolver,
     LBFGSSolver.name: LBFGSSolver,
+    ConstrainedSolver.name: ConstrainedSolver,
 }
 
 
 def make_solver(
     configuration: Configuration, kind: str = "dls", **kwargs
 ) -> Solver:
-    """Construct a solver backend by name (``"dls"`` / ``"lm"`` / ``"lbfgs"``)."""
+    """Construct a solver backend by name.
+
+    ``"dls"`` / ``"lm"`` / ``"lbfgs"`` / ``"constrained"`` (the last enforces
+    hard joint limits; pass ``limits=`` to override the default ConfigurationLimit).
+    """
     try:
         cls = SOLVERS[kind]
     except KeyError:
@@ -41,6 +47,7 @@ __all__ = [
     "DLSSolver",
     "LMSolver",
     "LBFGSSolver",
+    "ConstrainedSolver",
     "SOLVERS",
     "make_solver",
 ]

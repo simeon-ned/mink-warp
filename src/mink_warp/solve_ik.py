@@ -12,17 +12,29 @@ from collections.abc import Sequence
 import warp as wp
 
 from .configuration import Configuration
-from .solvers import DLSSolver, LBFGSSolver, LMSolver, Solver, make_solver
+from .limits import Limit
+from .solvers import (
+    ConstrainedSolver,
+    DLSSolver,
+    LBFGSSolver,
+    LMSolver,
+    Solver,
+    make_solver,
+)
 from .tasks.task import Task
 
 # Backward-compatible default: the original mink-warp solver is damped LS.
 IKSolver = DLSSolver
+
+# Sentinel: "limits not passed" -> keep the historical unconstrained behaviour.
+_UNSET = object()
 
 __all__ = [
     "IKSolver",
     "DLSSolver",
     "LMSolver",
     "LBFGSSolver",
+    "ConstrainedSolver",
     "Solver",
     "make_solver",
     "solve_ik",
@@ -37,6 +49,7 @@ def solve_ik(
     damping: float | None = None,
     *,
     solver: Solver | None = None,
+    limits: Sequence[Limit] | None = _UNSET,  # type: ignore[assignment]
 ) -> wp.array:
     """Solve one differential-IK step; returns velocity ``(nworld, nv)``.
 
@@ -46,14 +59,27 @@ def solve_ik(
 
     ``damping=None`` uses the solver's own default (a supplied ``DLSSolver``
     keeps its configured damping); pass a float to override it for this call.
+
+    ``limits`` enforces hard joint limits via a :class:`ConstrainedSolver`
+    (mink-shaped): ``None`` uses the default :class:`ConfigurationLimit`, a list
+    supplies specific limits, ``[]`` disables them. If ``limits`` is omitted the
+    historical unconstrained behaviour is kept. Ignored when ``solver`` is given.
     """
     if solver is None:
-        solver = DLSSolver(configuration)
+        if limits is _UNSET:
+            solver = DLSSolver(configuration)
+        else:
+            cs_kwargs = {} if damping is None else {"damping": damping}
+            solver = ConstrainedSolver(
+                configuration,
+                limits=None if limits is None else list(limits),
+                **cs_kwargs,
+            )
     elif solver.configuration is not configuration:
         raise ValueError("solver was created for a different Configuration")
-    if isinstance(solver, DLSSolver):
-        return solver.solve(tasks, dt, damping=damping)
-    return solver.solve_and_integrate(tasks, dt)
+    if isinstance(solver, (LMSolver, LBFGSSolver)):
+        return solver.solve_and_integrate(tasks, dt)
+    return solver.solve(tasks, dt, damping=damping)
 
 
 def solve_ik_iterations(
