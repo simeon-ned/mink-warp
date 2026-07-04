@@ -39,8 +39,19 @@ examples = [
     "viser",
 ]
 
+[dependency-groups]
+docs = [
+    "sphinx>=8.1",
+    "sphinx-autobuild>=2024.10",
+    "sphinx-book-theme>=1.1",
+    "sphinx-copybutton>=0.5",
+    "sphinx-design>=0.6",
+    "toml>=0.10.2",
+]
+
 [project.urls]
 Source = "https://github.com/simeon-ned/mink-warp"
+Documentation = "https://simeon-ned.github.io/mink-warp/"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mink_warp"]

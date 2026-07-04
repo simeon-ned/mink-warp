@@ -1,0 +1,753 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Solvers &#8212; mink-warp Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'source/api/solvers';</script>
+    <link rel="canonical" href="https://simeon-ned.github.io/mink-warp/source/api/solvers.html" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Limits" href="limits.html" />
+    <link rel="prev" title="Tasks" href="tasks.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="v0.1.0" />
+    <meta name="docbuild:last-update" content="Jul 05, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">mink-warp Documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../workflows/quickstart.html">Quickstart: single-world IK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../workflows/batched_ik.html">Batched IK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../concepts/index.html">Concepts</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/why_mink_warp.html">Why mink-warp (and not Newton IK)?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/architecture.html">Architecture overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/mink_parity.html">Mink API parity</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../tutorial/index.html">Tutorial</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../tutorial/tasks_and_limits.html">Tasks and limits</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../workflows/solvers.html">Solver backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../workflows/cuda_graphs.html">CUDA graphs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../benchmarks.html">Benchmarks</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tasks.html">Tasks</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Solvers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="limits.html">Limits</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inverse_kinematics.html">Inverse kinematics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lie.html">Lie groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html">Utilities</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further Reading</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../roadmap.html">Roadmap</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/simeon-ned/mink-warp" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/simeon-ned/mink-warp/edit/main/docs/source/api/solvers.rst" target="_blank"
+   class="btn btn-sm btn-source-edit-button dropdown-item"
+   title="Suggest edit"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-pencil-alt"></i>
+  </span>
+<span class="btn__text-container">Suggest edit</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/simeon-ned/mink-warp/issues/new?title=Issue%20on%20page%20%2Fsource/api/solvers.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../../_sources/source/api/solvers.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Solvers</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#base">Base</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#backends">Backends</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#factory">Factory</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="solvers">
+<h1>Solvers<a class="headerlink" href="#solvers" title="Link to this heading">#</a></h1>
+<section id="base">
+<h2>Base<a class="headerlink" href="#base" title="Link to this heading">#</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="mink_warp.solvers.base.Solver">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">mink_warp.solvers.base.</span></span><span class="sig-name descname"><span class="pre">Solver</span></span><a class="reference internal" href="../../_modules/mink_warp/solvers/base.html#Solver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mink_warp.solvers.base.Solver" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABC" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></a></p>
+<p>Batched IK solver operating on a shared <code class="xref py py-class docutils literal notranslate"><span class="pre">Configuration</span></code>.</p>
+<p>Contract: <a class="reference internal" href="#mink_warp.solvers.base.Solver.solve_and_integrate" title="mink_warp.solvers.base.Solver.solve_and_integrate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">solve_and_integrate()</span></code></a> advances the configuration toward the
+task targets and returns a representative tangent velocity <code class="docutils literal notranslate"><span class="pre">(nworld,</span> <span class="pre">nv)</span></code>.</p>
+<p>For multi-iteration backends (LM / L-BFGS) the returned <code class="docutils literal notranslate"><span class="pre">v</span></code> is the sum of
+the per-iteration tangent steps divided by <code class="docutils literal notranslate"><span class="pre">dt</span></code>. Re-integrating <code class="docutils literal notranslate"><span class="pre">v</span></code> over
+<code class="docutils literal notranslate"><span class="pre">dt</span></code> reproduces the optimized configuration exactly for Euclidean joints
+(hinge / slide); for free / ball joints it agrees to second order (the true
+update is a composition of manifold exponentials, <code class="docutils literal notranslate"><span class="pre">v</span></code> their tangent sum).
+The configuration itself is always left at the exact optimized state.
+A solver is bound to its configuration’s <code class="docutils literal notranslate"><span class="pre">nworld</span></code> / <code class="docutils literal notranslate"><span class="pre">nv</span></code> and cannot be
+reused with a differently sized one.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="mink_warp.solvers.base.Solver.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'solver'</span></span><a class="headerlink" href="#mink_warp.solvers.base.Solver.name" title="Link to this definition">#</a></dt>
+<dd><p>Registry key / human label.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mink_warp.solvers.base.Solver.solve_and_integrate">
+<span class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">solve_and_integrate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tasks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="tasks.html#mink_warp.tasks.task.Task" title="mink_warp.tasks.task.Task"><span class="pre">Task</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">iterations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_graph</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">array</span></span></span><a class="reference internal" href="../../_modules/mink_warp/solvers/base.html#Solver.solve_and_integrate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mink_warp.solvers.base.Solver.solve_and_integrate" title="Link to this definition">#</a></dt>
+<dd><p>Advance <code class="docutils literal notranslate"><span class="pre">configuration</span></code> and return the tangent velocity.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mink_warp.solvers.base.Solver.step">
+<span class="sig-name descname"><span class="pre">step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tasks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="tasks.html#mink_warp.tasks.task.Task" title="mink_warp.tasks.task.Task"><span class="pre">Task</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">iterations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">array</span></span></span><a class="reference internal" href="../../_modules/mink_warp/solvers/base.html#Solver.step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mink_warp.solvers.base.Solver.step" title="Link to this definition">#</a></dt>
+<dd><p>Alias for <a class="reference internal" href="#mink_warp.solvers.base.Solver.solve_and_integrate" title="mink_warp.solvers.base.Solver.solve_and_integrate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">solve_and_integrate()</span></code></a> (no graph capture).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mink_warp.solvers.base.Solver.invalidate_graph">
+<span class="sig-name descname"><span class="pre">invalidate_graph</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/mink_warp/solvers/base.html#Solver.invalidate_graph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mink_warp.solvers.base.Solver.invalidate_graph" title="Link to this definition">#</a></dt>
+<dd><p>Drop any captured CUDA graph. Backends without a graph no-op.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="backends">
+<h2>Backends<a class="headerlink" href="#backends" title="Link to this heading">#</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="mink_warp.solvers.DLSSolver">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">mink_warp.solvers.</span></span><span class="sig-name descname"><span class="pre">DLSSolver</span></span><a class="reference internal" href="../../_modules/mink_warp/solvers/dls.html#DLSSolver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mink_warp.solvers.DLSSolver" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#mink_warp.solvers.base.Solver" title="mink_warp.solvers.base.Solver"><code class="xref py py-class docutils literal notranslate"><span class="pre">Solver</span></code></a></p>
+<p>Reusable batched damped-least-squares IK solver.</p>
+<p>Solves <span class="math notranslate nohighlight">\((W^T W + \lambda I)\Delta q = -W^T e\)</span> on device and returns
+<span class="math notranslate nohighlight">\(v = \Delta q / dt\)</span>. Optional CUDA graph capture for fixed task sets.</p>
+<p>Note: CUDA graphs cannot include host-&gt;device copies. <code class="docutils literal notranslate"><span class="pre">dt</span></code> is written to a
+device buffer before capture; integrate is out-of-place (in-place qpos
+aliasing is not graph-safe).</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="mink_warp.solvers.DLSSolver.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'dls'</span></span><a class="headerlink" href="#mink_warp.solvers.DLSSolver.name" title="Link to this definition">#</a></dt>
+<dd><p>Registry key / human label.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mink_warp.solvers.DLSSolver.solve">
+<span class="sig-name descname"><span class="pre">solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tasks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="tasks.html#mink_warp.tasks.task.Task" title="mink_warp.tasks.task.Task"><span class="pre">Task</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">array</span></span></span><a class="reference internal" href="../../_modules/mink_warp/solvers/dls.html#DLSSolver.solve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mink_warp.solvers.DLSSolver.solve" title="Link to this definition">#</a></dt>
+<dd><p>Compute the velocity for one differential step (no integration).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mink_warp.solvers.DLSSolver.solve_and_integrate">
+<span class="sig-name descname"><span class="pre">solve_and_integrate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tasks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="tasks.html#mink_warp.tasks.task.Task" title="mink_warp.tasks.task.Task"><span class="pre">Task</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">iterations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_graph</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">array</span></span></span><a class="reference internal" href="../../_modules/mink_warp/solvers/dls.html#DLSSolver.solve_and_integrate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mink_warp.solvers.DLSSolver.solve_and_integrate" title="Link to this definition">#</a></dt>
+<dd><p>Solve and integrate <code class="docutils literal notranslate"><span class="pre">iterations</span></code> times; returns last velocity.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mink_warp.solvers.DLSSolver.invalidate_graph">
+<span class="sig-name descname"><span class="pre">invalidate_graph</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/mink_warp/solvers/dls.html#DLSSolver.invalidate_graph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mink_warp.solvers.DLSSolver.invalidate_graph" title="Link to this definition">#</a></dt>
+<dd><p>Drop a captured CUDA graph (e.g. after changing the task list).</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="mink_warp.solvers.LMSolver">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">mink_warp.solvers.</span></span><span class="sig-name descname"><span class="pre">LMSolver</span></span><a class="reference internal" href="../../_modules/mink_warp/solvers/lm.html#LMSolver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mink_warp.solvers.LMSolver" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#mink_warp.solvers.base.Solver" title="mink_warp.solvers.base.Solver"><code class="xref py py-class docutils literal notranslate"><span class="pre">Solver</span></code></a></p>
+<p>Batched Levenberg-Marquardt IK solver.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lambda0</strong> – initial damping (reset at the start of every call).</p></li>
+<li><p><strong>lambda_max</strong> (<em>lambda_min /</em>) – clamp range for the adaptive damping.</p></li>
+<li><p><strong>eps</strong> – gain-ratio regularizer added to the predicted reduction, so a
+near-zero prediction at convergence does not amplify float32 noise.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="mink_warp.solvers.LMSolver.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'lm'</span></span><a class="headerlink" href="#mink_warp.solvers.LMSolver.name" title="Link to this definition">#</a></dt>
+<dd><p>Registry key / human label.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mink_warp.solvers.LMSolver.solve_and_integrate">
+<span class="sig-name descname"><span class="pre">solve_and_integrate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tasks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="tasks.html#mink_warp.tasks.task.Task" title="mink_warp.tasks.task.Task"><span class="pre">Task</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">iterations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_graph</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">_ignored</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">array</span></span></span><a class="reference internal" href="../../_modules/mink_warp/solvers/lm.html#LMSolver.solve_and_integrate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mink_warp.solvers.LMSolver.solve_and_integrate" title="Link to this definition">#</a></dt>
+<dd><p>Advance <code class="docutils literal notranslate"><span class="pre">configuration</span></code> and return the tangent velocity.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mink_warp.solvers.LMSolver.invalidate_graph">
+<span class="sig-name descname"><span class="pre">invalidate_graph</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/mink_warp/solvers/lm.html#LMSolver.invalidate_graph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mink_warp.solvers.LMSolver.invalidate_graph" title="Link to this definition">#</a></dt>
+<dd><p>Drop any captured CUDA graph. Backends without a graph no-op.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="mink_warp.solvers.LBFGSSolver">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">mink_warp.solvers.</span></span><span class="sig-name descname"><span class="pre">LBFGSSolver</span></span><a class="reference internal" href="../../_modules/mink_warp/solvers/lbfgs.html#LBFGSSolver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mink_warp.solvers.LBFGSSolver" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#mink_warp.solvers.base.Solver" title="mink_warp.solvers.base.Solver"><code class="xref py py-class docutils literal notranslate"><span class="pre">Solver</span></code></a></p>
+<p>Batched limited-memory BFGS IK solver.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>history</strong> – number <code class="docutils literal notranslate"><span class="pre">m</span></code> of <code class="docutils literal notranslate"><span class="pre">(s,</span> <span class="pre">y)</span></code> pairs retained.</p></li>
+<li><p><strong>line_search</strong> – candidate step sizes evaluated in parallel each iteration.</p></li>
+<li><p><strong>eps</strong> – sufficient-decrease floor for the line search.</p></li>
+<li><p><strong>curvature_eps</strong> – relative curvature floor <code class="docutils literal notranslate"><span class="pre">s.y</span> <span class="pre">&gt;</span> <span class="pre">curvature_eps</span> <span class="pre">*</span> <span class="pre">||y||^2</span></code>
+below which a pair is skipped (kept out of the history).</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="mink_warp.solvers.LBFGSSolver.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'lbfgs'</span></span><a class="headerlink" href="#mink_warp.solvers.LBFGSSolver.name" title="Link to this definition">#</a></dt>
+<dd><p>Registry key / human label.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mink_warp.solvers.LBFGSSolver.solve_and_integrate">
+<span class="sig-name descname"><span class="pre">solve_and_integrate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tasks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="tasks.html#mink_warp.tasks.task.Task" title="mink_warp.tasks.task.Task"><span class="pre">Task</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">iterations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_graph</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">_ignored</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">array</span></span></span><a class="reference internal" href="../../_modules/mink_warp/solvers/lbfgs.html#LBFGSSolver.solve_and_integrate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mink_warp.solvers.LBFGSSolver.solve_and_integrate" title="Link to this definition">#</a></dt>
+<dd><p>Advance <code class="docutils literal notranslate"><span class="pre">configuration</span></code> and return the tangent velocity.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="mink_warp.solvers.ConstrainedSolver">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">mink_warp.solvers.</span></span><span class="sig-name descname"><span class="pre">ConstrainedSolver</span></span><a class="reference internal" href="../../_modules/mink_warp/solvers/constrained.html#ConstrainedSolver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mink_warp.solvers.ConstrainedSolver" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#mink_warp.solvers.base.Solver" title="mink_warp.solvers.base.Solver"><code class="xref py py-class docutils literal notranslate"><span class="pre">Solver</span></code></a></p>
+<p>Batched box-constrained IK solver (hard joint limits via ADMM).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>configuration</strong> – Batched configuration to advance.</p></li>
+<li><p><strong>limits</strong> – Hard limits to enforce. <code class="docutils literal notranslate"><span class="pre">None</span></code> defaults to a single
+<code class="xref py py-class docutils literal notranslate"><span class="pre">ConfigurationLimit</span></code> (mink’s <code class="docutils literal notranslate"><span class="pre">limits=None</span></code> behaviour); pass
+<code class="docutils literal notranslate"><span class="pre">[]</span></code> to disable limits (then this reduces to a regularized DLS solve).</p></li>
+<li><p><strong>admm_iters</strong> – Inner ADMM iterations per solve (feasibility holds at any
+count; more tightens agreement with the true QP optimum).</p></li>
+<li><p><strong>rho_scale</strong> – Control the per-world ADMM penalty
+<code class="docutils literal notranslate"><span class="pre">rho</span> <span class="pre">=</span> <span class="pre">clamp(rho_scale*sqrt(min*max</span> <span class="pre">diag</span> <span class="pre">H),</span> <span class="pre">rho_min,</span> <span class="pre">rho_max)</span></code>.
+<code class="docutils literal notranslate"><span class="pre">rho_min</span></code> must be &gt; 0: it is the hard SPD safeguard that keeps
+<code class="docutils literal notranslate"><span class="pre">M</span> <span class="pre">=</span> <span class="pre">H</span> <span class="pre">+</span> <span class="pre">rho</span> <span class="pre">I</span></code> positive-definite (so the tile Cholesky never sees
+a zero pivot) even for a dof untouched by any task.</p></li>
+<li><p><strong>rho_min</strong> – Control the per-world ADMM penalty
+<code class="docutils literal notranslate"><span class="pre">rho</span> <span class="pre">=</span> <span class="pre">clamp(rho_scale*sqrt(min*max</span> <span class="pre">diag</span> <span class="pre">H),</span> <span class="pre">rho_min,</span> <span class="pre">rho_max)</span></code>.
+<code class="docutils literal notranslate"><span class="pre">rho_min</span></code> must be &gt; 0: it is the hard SPD safeguard that keeps
+<code class="docutils literal notranslate"><span class="pre">M</span> <span class="pre">=</span> <span class="pre">H</span> <span class="pre">+</span> <span class="pre">rho</span> <span class="pre">I</span></code> positive-definite (so the tile Cholesky never sees
+a zero pivot) even for a dof untouched by any task.</p></li>
+<li><p><strong>rho_max</strong> – Control the per-world ADMM penalty
+<code class="docutils literal notranslate"><span class="pre">rho</span> <span class="pre">=</span> <span class="pre">clamp(rho_scale*sqrt(min*max</span> <span class="pre">diag</span> <span class="pre">H),</span> <span class="pre">rho_min,</span> <span class="pre">rho_max)</span></code>.
+<code class="docutils literal notranslate"><span class="pre">rho_min</span></code> must be &gt; 0: it is the hard SPD safeguard that keeps
+<code class="docutils literal notranslate"><span class="pre">M</span> <span class="pre">=</span> <span class="pre">H</span> <span class="pre">+</span> <span class="pre">rho</span> <span class="pre">I</span></code> positive-definite (so the tile Cholesky never sees
+a zero pivot) even for a dof untouched by any task.</p></li>
+<li><p><strong>alpha</strong> – ADMM over-relaxation in [1, 2) (1.6 accelerates convergence).</p></li>
+<li><p><strong>damping</strong> – Levenberg-Marquardt damping added to <code class="docutils literal notranslate"><span class="pre">H</span></code>’s diagonal (matches
+mink’s <code class="docutils literal notranslate"><span class="pre">damping</span></code>, applied on top of per-task <code class="docutils literal notranslate"><span class="pre">mu</span></code>).</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="mink_warp.solvers.ConstrainedSolver.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'constrained'</span></span><a class="headerlink" href="#mink_warp.solvers.ConstrainedSolver.name" title="Link to this definition">#</a></dt>
+<dd><p>Registry key / human label.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mink_warp.solvers.ConstrainedSolver.solve">
+<span class="sig-name descname"><span class="pre">solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tasks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="tasks.html#mink_warp.tasks.task.Task" title="mink_warp.tasks.task.Task"><span class="pre">Task</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">array</span></span></span><a class="reference internal" href="../../_modules/mink_warp/solvers/constrained.html#ConstrainedSolver.solve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mink_warp.solvers.ConstrainedSolver.solve" title="Link to this definition">#</a></dt>
+<dd><p>Compute the box-feasible velocity for one differential step.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mink_warp.solvers.ConstrainedSolver.solve_and_integrate">
+<span class="sig-name descname"><span class="pre">solve_and_integrate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tasks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="tasks.html#mink_warp.tasks.task.Task" title="mink_warp.tasks.task.Task"><span class="pre">Task</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">iterations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_graph</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">damping</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">array</span></span></span><a class="reference internal" href="../../_modules/mink_warp/solvers/constrained.html#ConstrainedSolver.solve_and_integrate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mink_warp.solvers.ConstrainedSolver.solve_and_integrate" title="Link to this definition">#</a></dt>
+<dd><p>Solve and integrate <code class="docutils literal notranslate"><span class="pre">iterations</span></code> times; returns last velocity.</p>
+<p>Each outer iteration re-linearizes <code class="docutils literal notranslate"><span class="pre">H</span></code> and recomputes the box at the
+current configuration, so the returned step stays feasible throughout.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mink_warp.solvers.ConstrainedSolver.invalidate_graph">
+<span class="sig-name descname"><span class="pre">invalidate_graph</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/mink_warp/solvers/constrained.html#ConstrainedSolver.invalidate_graph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mink_warp.solvers.ConstrainedSolver.invalidate_graph" title="Link to this definition">#</a></dt>
+<dd><p>Drop any captured CUDA graph. Backends without a graph no-op.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="factory">
+<h2>Factory<a class="headerlink" href="#factory" title="Link to this heading">#</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="mink_warp.solvers.make_solver">
+<span class="sig-prename descclassname"><span class="pre">mink_warp.solvers.</span></span><span class="sig-name descname"><span class="pre">make_solver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">configuration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="configuration.html#mink_warp.Configuration" title="mink_warp.configuration.Configuration"><span class="pre">Configuration</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">kind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'dls'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#mink_warp.solvers.base.Solver" title="mink_warp.solvers.base.Solver"><span class="pre">Solver</span></a></span></span><a class="reference internal" href="../../_modules/mink_warp/solvers.html#make_solver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mink_warp.solvers.make_solver" title="Link to this definition">#</a></dt>
+<dd><p>Construct a solver backend by name.</p>
+<p><code class="docutils literal notranslate"><span class="pre">&quot;dls&quot;</span></code> / <code class="docutils literal notranslate"><span class="pre">&quot;lm&quot;</span></code> / <code class="docutils literal notranslate"><span class="pre">&quot;lbfgs&quot;</span></code> / <code class="docutils literal notranslate"><span class="pre">&quot;constrained&quot;</span></code> (the last enforces
+hard joint limits; pass <code class="docutils literal notranslate"><span class="pre">limits=</span></code> to override the default ConfigurationLimit).</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="mink_warp.solvers.SOLVERS">
+<span class="sig-prename descclassname"><span class="pre">mink_warp.solvers.</span></span><span class="sig-name descname"><span class="pre">SOLVERS</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.14)"><span class="pre">type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#mink_warp.solvers.base.Solver" title="mink_warp.solvers.base.Solver"><span class="pre">Solver</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'constrained':</span> <span class="pre">&lt;class</span> <span class="pre">'mink_warp.solvers.constrained.ConstrainedSolver'&gt;,</span> <span class="pre">'dls':</span> <span class="pre">&lt;class</span> <span class="pre">'mink_warp.solvers.dls.DLSSolver'&gt;,</span> <span class="pre">'lbfgs':</span> <span class="pre">&lt;class</span> <span class="pre">'mink_warp.solvers.lbfgs.LBFGSSolver'&gt;,</span> <span class="pre">'lm':</span> <span class="pre">&lt;class</span> <span class="pre">'mink_warp.solvers.lm.LMSolver'&gt;}</span></span><a class="headerlink" href="#mink_warp.solvers.SOLVERS" title="Link to this definition">#</a></dt>
+<dd><p>Registry of solver kinds by name.</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="tasks.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Tasks</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="limits.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Limits</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#base">Base</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#backends">Backends</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#factory">Factory</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By mink-warp contributors
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, mink-warp contributors.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    <p class="last-updated">
+  Last updated on Jul 05, 2026.
+  <br/>
+</p>
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

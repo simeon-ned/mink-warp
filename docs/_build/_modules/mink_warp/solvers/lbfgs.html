@@ -1,0 +1,596 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mink_warp.solvers.lbfgs &#8212; mink-warp Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/mink_warp/solvers/lbfgs';</script>
+    <link rel="canonical" href="https://simeon-ned.github.io/mink-warp/_modules/mink_warp/solvers/lbfgs.html" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="v0.1.0" />
+    <meta name="docbuild:last-update" content="Jul 05, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">mink-warp Documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../source/workflows/quickstart.html">Quickstart: single-world IK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../source/workflows/batched_ik.html">Batched IK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../source/examples.html">Examples</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../source/concepts/index.html">Concepts</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/concepts/architecture.html">Architecture overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/concepts/mink_parity.html">Mink API parity</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../source/concepts/architecture.html">Architecture overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../source/concepts/mink_parity.html">Mink API parity</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../source/tutorial/index.html">Tutorial</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/tutorial/tasks_and_limits.html">Tasks and limits</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../source/workflows/solvers.html">Solver backends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../source/workflows/cuda_graphs.html">CUDA graphs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../source/benchmarks.html">Benchmarks</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../source/api/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/api/configuration.html">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/api/tasks.html">Tasks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/api/solvers.html">Solvers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/api/limits.html">Limits</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/api/inverse_kinematics.html">Inverse kinematics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/api/lie.html">Lie groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/api/utilities.html">Utilities</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Further Reading</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../source/roadmap.html">Roadmap</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-source-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Source repositories">
+    <i class="fab fa-github"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="https://github.com/simeon-ned/mink-warp" target="_blank"
+   class="btn btn-sm btn-source-repository-button dropdown-item"
+   title="Source repository"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fab fa-github"></i>
+  </span>
+<span class="btn__text-container">Repository</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li><a href="https://github.com/simeon-ned/mink-warp/issues/new?title=Issue%20on%20page%20%2F_modules/mink_warp/solvers/lbfgs.html&body=Your%20issue%20content%20here." target="_blank"
+   class="btn btn-sm btn-source-issues-button dropdown-item"
+   title="Open an issue"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-lightbulb"></i>
+  </span>
+<span class="btn__text-container">Open issue</span>
+</a>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1></h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for mink_warp.solvers.lbfgs</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;L-BFGS IK backend (quasi-Newton, batched).</span>
+
+<span class="sd">Same weighted least-squares cost as :class:`LMSolver`, but never forms the</span>
+<span class="sd">Hessian. Each iteration builds a descent direction with the two-loop recursion</span>
+<span class="sd">over a short ``(s, y)`` history, runs a parallel line search over a fixed set of</span>
+<span class="sd">step sizes (best-cost per world), then updates the curvature history. Eager only</span>
+<span class="sd">(the per-candidate step sizes make CUDA-graph capture impractical).</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">warp</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">wp</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..configuration</span><span class="w"> </span><span class="kn">import</span> <span class="n">Configuration</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..kernels.lbfgs</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">accumulate_grad</span><span class="p">,</span>
+    <span class="n">apply_step</span><span class="p">,</span>
+    <span class="n">lbfgs_gamma</span><span class="p">,</span>
+    <span class="n">lbfgs_two_loop</span><span class="p">,</span>
+    <span class="n">ls_init</span><span class="p">,</span>
+    <span class="n">ls_update</span><span class="p">,</span>
+    <span class="n">push_history</span><span class="p">,</span>
+    <span class="n">shift_history</span><span class="p">,</span>
+    <span class="n">zero_grad</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..kernels.lm</span><span class="w"> </span><span class="kn">import</span> <span class="n">accumulate_cost</span><span class="p">,</span> <span class="n">zero_cost</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..kernels.solver</span><span class="w"> </span><span class="kn">import</span> <span class="n">scale_velocity</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..tasks.task</span><span class="w"> </span><span class="kn">import</span> <span class="n">Task</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Solver</span>
+
+<span class="c1">#: Default parallel line-search step sizes (largest first).</span>
+<span class="n">DEFAULT_LINE_SEARCH</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="LBFGSSolver">
+<a class="viewcode-back" href="../../../source/api/solvers.html#mink_warp.solvers.LBFGSSolver">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">LBFGSSolver</span><span class="p">(</span><span class="n">Solver</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Batched limited-memory BFGS IK solver.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        history: number ``m`` of ``(s, y)`` pairs retained.</span>
+<span class="sd">        line_search: candidate step sizes evaluated in parallel each iteration.</span>
+<span class="sd">        eps: sufficient-decrease floor for the line search.</span>
+<span class="sd">        curvature_eps: relative curvature floor ``s.y &gt; curvature_eps * ||y||^2``</span>
+<span class="sd">            below which a pair is skipped (kept out of the history).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;lbfgs&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">configuration</span><span class="p">:</span> <span class="n">Configuration</span><span class="p">,</span>
+        <span class="n">history</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span>
+        <span class="n">line_search</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">DEFAULT_LINE_SEARCH</span><span class="p">,</span>
+        <span class="n">eps</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-16</span><span class="p">,</span>
+        <span class="n">curvature_eps</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-8</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">configuration</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">history</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;history must be &gt;= 1, got </span><span class="si">{</span><span class="n">history</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">history</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">alphas</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">line_search</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">alphas</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;line_search must contain at least one step size&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">eps</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curvature_eps</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">curvature_eps</span><span class="p">)</span>
+
+        <span class="n">nworld</span> <span class="o">=</span> <span class="n">configuration</span><span class="o">.</span><span class="n">nworld</span>
+        <span class="n">nv</span> <span class="o">=</span> <span class="n">configuration</span><span class="o">.</span><span class="n">nv</span>
+        <span class="n">nq</span> <span class="o">=</span> <span class="n">configuration</span><span class="o">.</span><span class="n">nq</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span>
+        <span class="k">with</span> <span class="n">wp</span><span class="o">.</span><span class="n">ScopedDevice</span><span class="p">(</span><span class="n">configuration</span><span class="o">.</span><span class="n">device</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nworld</span><span class="p">,</span> <span class="n">nv</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">g_new</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nworld</span><span class="p">,</span> <span class="n">nv</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nworld</span><span class="p">,</span> <span class="n">nv</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q_work</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nworld</span><span class="p">,</span> <span class="n">nv</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nworld</span><span class="p">,</span> <span class="n">nv</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dq_total</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nworld</span><span class="p">,</span> <span class="n">nv</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">v</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nworld</span><span class="p">,</span> <span class="n">nv</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">s_hist</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nworld</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">nv</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">y_hist</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nworld</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">nv</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rho_hist</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nworld</span><span class="p">,</span> <span class="n">m</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">alpha_scr</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nworld</span><span class="p">,</span> <span class="n">m</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">C_old</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">C_new</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">C_cand</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">C_best</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">best_alpha</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">qpos_base</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nworld</span><span class="p">,</span> <span class="n">nq</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+<div class="viewcode-block" id="LBFGSSolver.solve_and_integrate">
+<a class="viewcode-back" href="../../../source/api/solvers.html#mink_warp.solvers.LBFGSSolver.solve_and_integrate">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">solve_and_integrate</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">tasks</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Task</span><span class="p">],</span>
+        <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+        <span class="n">use_graph</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>  <span class="c1"># noqa: ARG002 - eager only</span>
+        <span class="o">**</span><span class="n">_ignored</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">wp</span><span class="o">.</span><span class="n">array</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_dt</span><span class="p">(</span><span class="n">dt</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">iterations</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;iterations must be &gt;= 1, got </span><span class="si">{</span><span class="n">iterations</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">cfg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">configuration</span>
+        <span class="n">nv</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">nv</span>
+        <span class="n">nworld</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">nworld</span>
+
+        <span class="k">with</span> <span class="n">wp</span><span class="o">.</span><span class="n">ScopedDevice</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">device</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dq_total</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">s_hist</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">y_hist</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rho_hist</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+            <span class="c1"># Gradient / cost at the starting configuration.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_grad</span><span class="p">(</span><span class="n">tasks</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">C_old</span><span class="p">)</span>
+
+            <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">iterations</span><span class="p">):</span>
+                <span class="n">wp</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">lbfgs_gamma</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">nworld</span><span class="p">,</span>
+                          <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">s_hist</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_hist</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">nv</span><span class="p">],</span>
+                          <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">])</span>
+                <span class="n">wp</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">lbfgs_two_loop</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">nworld</span><span class="p">,</span>
+                          <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">s_hist</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_hist</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rho_hist</span><span class="p">,</span>
+                                  <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">nv</span><span class="p">],</span>
+                          <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha_scr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">q_work</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_line_search</span><span class="p">(</span><span class="n">tasks</span><span class="p">)</span>
+                <span class="c1"># Apply the chosen step and accumulate the net motion.</span>
+                <span class="n">wp</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">q</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">qpos_base</span><span class="p">)</span>
+                <span class="n">wp</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">apply_step</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">nworld</span><span class="p">,</span>
+                          <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_alpha</span><span class="p">,</span> <span class="n">nv</span><span class="p">],</span>
+                          <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dq_total</span><span class="p">])</span>
+                <span class="n">cfg</span><span class="o">.</span><span class="n">integrate_inplace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+                <span class="c1"># Gradient / cost at the new configuration.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_grad</span><span class="p">(</span><span class="n">tasks</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">g_new</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">C_new</span><span class="p">)</span>
+                <span class="c1"># Curvature-guarded history update.</span>
+                <span class="k">if</span> <span class="n">count</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">:</span>
+                    <span class="n">wp</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">shift_history</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">nworld</span><span class="p">,</span>
+                              <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">,</span> <span class="n">nv</span><span class="p">],</span>
+                              <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">s_hist</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_hist</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rho_hist</span><span class="p">])</span>
+                    <span class="n">slot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">-</span> <span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">slot</span> <span class="o">=</span> <span class="n">count</span>
+                    <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">wp</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">push_history</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">nworld</span><span class="p">,</span>
+                          <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">g_new</span><span class="p">,</span> <span class="n">slot</span><span class="p">,</span>
+                                  <span class="bp">self</span><span class="o">.</span><span class="n">curvature_eps</span><span class="p">,</span> <span class="n">nv</span><span class="p">],</span>
+                          <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">s_hist</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y_hist</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rho_hist</span><span class="p">])</span>
+                <span class="n">wp</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">g_new</span><span class="p">)</span>
+                <span class="n">wp</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">C_old</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">C_new</span><span class="p">)</span>
+
+            <span class="n">wp</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">scale_velocity</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">nworld</span><span class="p">,</span>
+                      <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dq_total</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">dt</span><span class="p">),</span> <span class="n">nv</span><span class="p">],</span> <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">v</span><span class="p">])</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">v</span></div>
+
+
+    <span class="c1"># Internal.</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_grad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tasks</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Task</span><span class="p">],</span> <span class="n">g_buf</span><span class="p">:</span> <span class="n">wp</span><span class="o">.</span><span class="n">array</span><span class="p">,</span> <span class="n">C_buf</span><span class="p">:</span> <span class="n">wp</span><span class="o">.</span><span class="n">array</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">cfg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">configuration</span>
+        <span class="n">nv</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">nv</span>
+        <span class="n">wp</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">zero_grad</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">nworld</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">g_buf</span><span class="p">,</span> <span class="n">C_buf</span><span class="p">,</span> <span class="n">nv</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">tasks</span><span class="p">:</span>
+            <span class="n">error</span><span class="p">,</span> <span class="n">jac</span><span class="p">,</span> <span class="n">cost</span> <span class="o">=</span> <span class="n">task</span><span class="o">.</span><span class="n">error_jacobian_cost</span><span class="p">(</span><span class="n">cfg</span><span class="p">)</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">error</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">wp</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">accumulate_grad</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">cfg</span><span class="o">.</span><span class="n">nworld</span><span class="p">,</span>
+                      <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">error</span><span class="p">,</span> <span class="n">jac</span><span class="p">,</span> <span class="n">cost</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">nv</span><span class="p">,</span> <span class="n">g_buf</span><span class="p">,</span> <span class="n">C_buf</span><span class="p">])</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_line_search</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tasks</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Task</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">cfg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">configuration</span>
+        <span class="n">nworld</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">nworld</span>
+        <span class="n">wp</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">qpos_base</span><span class="p">,</span> <span class="n">cfg</span><span class="o">.</span><span class="n">q</span><span class="p">)</span>
+        <span class="n">wp</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">ls_init</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">nworld</span><span class="p">,</span> <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">C_best</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_alpha</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">alphas</span><span class="p">:</span>
+            <span class="n">wp</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">q</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">qpos_base</span><span class="p">)</span>
+            <span class="n">cfg</span><span class="o">.</span><span class="n">integrate_inplace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="n">a</span><span class="p">)</span>  <span class="c1"># q_base (+) a * p</span>
+            <span class="n">wp</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">zero_cost</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">nworld</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">C_cand</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">tasks</span><span class="p">:</span>
+                <span class="n">error</span><span class="p">,</span> <span class="n">cost</span> <span class="o">=</span> <span class="n">task</span><span class="o">.</span><span class="n">error_cost</span><span class="p">(</span><span class="n">cfg</span><span class="p">)</span>
+                <span class="n">k</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">error</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">wp</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">accumulate_cost</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">nworld</span><span class="p">,</span>
+                          <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">error</span><span class="p">,</span> <span class="n">cost</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">C_cand</span><span class="p">])</span>
+            <span class="n">wp</span><span class="o">.</span><span class="n">launch</span><span class="p">(</span><span class="n">ls_update</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">nworld</span><span class="p">,</span>
+                      <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">C_cand</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">C_old</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">],</span>
+                      <span class="n">outputs</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">C_best</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_alpha</span><span class="p">])</span></div>
+
+</pre></div>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By mink-warp contributors
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2026, mink-warp contributors.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    <p class="last-updated">
+  Last updated on Jul 05, 2026.
+  <br/>
+</p>
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

@@ -49,6 +49,16 @@ uv run examples/batched_g1_ik.py
 
 Assets: `examples/franka_emika_panda/`, `examples/unitree_g1/` (vendored from Mink).
 
+## Documentation
+
+```bash
+uv sync --extra dev --group docs
+make docs        # docs/_build/index.html
+make docs-watch  # live reload
+```
+
+User guide, concepts, and API reference: [docs/](docs/) (Sphinx, mink / wbc-mjlab layout).
+
 ## Benchmarks
 
 Batched throughput and CPU-vs-mink accuracy parity (see `benchmarks/README.md`):
