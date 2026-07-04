@@ -72,5 +72,55 @@ uv run python benchmarks/bench_parity.py panda --steps 200   # prints this basel
 uv run python benchmarks/bench_parity.py panda --steps 200        # CPU / GPU
 ```
 
+## Solver backends — throughput vs tracking accuracy (`panda`)
+
+Three interchangeable backends minimise the same weighted task cost behind one
+`solve_and_integrate` API: **`dls`** (one damped Gauss-Newton step/tick, default),
+**`lm`** (Levenberg-Marquardt), **`lbfgs`** (limited-memory BFGS). Optimizer
+backends run `iters` inner iterations per call (default 5). `|Δpos|` = world-0
+end-effector distance to its moving target [m]; lower = tighter tracking.
+
+On this gentle circle target DLS already converges each tick, so `lm` matches its
+tracking at ~8× the per-call cost and `lbfgs` (iteration-bounded at 5) trails —
+the optimizer backends earn their cost on **hard / far / redundant** starts where a
+single GN step diverges. Raising `--iters` tightens `|Δpos|` (e.g. `lbfgs --iters 12`
+→ `|Δpos|` mean 3.4e-4).
+
+**CPU** (Apple Silicon, eager, float32):
+
+| solver | iters | 1 world (solves/s) | 256 worlds (solves/s) | µs/solve @256 | `\|Δpos\|` mean | `\|Δpos\|` max |
+|---|--:|--:|--:|--:|--:|--:|
+| dls   | 1 |  2,973 | 159,116 |   6.3 | 2.3e-4 | 7.4e-4 |
+| lm    | 5 |    366 |  20,005 |  50.0 | 2.5e-4 | 8.0e-4 |
+| lbfgs | 5 |    122 |   8,400 | 119.1 | 3.4e-3 | 7.5e-3 |
+
+**GPU** (RTX 4070 Ti SUPER; 1 world eager, ≥256 worlds CUDA graph — `lbfgs` eager):
+
+| solver | iters | 1 world (solves/s) | 256 (solves/s) | 4096 (solves/s) | `\|Δpos\|` mean | `\|Δpos\|` max |
+|---|--:|--:|--:|--:|--:|--:|
+| dls   | 1 | 2,068 | 877,917 | 9,677,403 | 2.1e-4 | 7.4e-4 |
+| lm    | 5 |   263 | 151,055 | 1,641,489 | 2.2e-4 | 8.0e-4 |
+| lbfgs | 5 |    87 |  21,739 |   344,379 | 3.5e-3 | 1.0e-2 |
+
+```bash
+uv run python benchmarks/bench_solvers.py --nworld 1 --steps 200                     # CPU 1 world
+uv run python benchmarks/bench_solvers.py --nworld 256 --graph --device cuda:0        # GPU batched
+uv run python benchmarks/bench_solvers.py --nworld 4096 --graph --device cuda:0
+```
+
+### LM throughput sweep (`panda`, GPU, CUDA graph, iters=5)
+
+| worlds | solves/s | µs/solve |
+|-------:|---------:|---------:|
+| 1      |     1,353 |    739.0 |
+| 64     |    65,961 |     15.2 |
+| 1024   |   545,998 |     1.83 |
+| 4096   | 1,650,739 |     0.61 |
+| 16384  | 2,123,132 |     0.47 |
+
+```bash
+uv run python benchmarks/bench_ik.py panda --solver lm --graph --batches 1 64 1024 4096 16384
+```
+
 _Numbers will shift with GPU model, batch, task stack, and warp/mujoco-warp versions. Re-run on
 your target hardware._
