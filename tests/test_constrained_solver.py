@@ -6,33 +6,21 @@ Two layers:
   it, solve the box QP with the NumPy ADMM oracle, and check feasibility and
   agreement with mink's daqp QP. This validates the entire pipeline except the
   GPU-only tile-Cholesky ADMM kernel.
-* **CUDA** — the real device kernel is exercised on GPU: feasibility at any
-  iteration count, the limit actually binding when pushed, agreement with mink,
-  and batched independence.
+* **kernel** — the real box-ADMM tile kernel (runs on CPU or GPU) is exercised:
+  feasibility at any iteration count, the limit actually binding when pushed,
+  agreement with mink, velocity limits, and batched independence.
 """
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
-import warp as wp
 
 mink = pytest.importorskip("mink")
 
 from helpers_admm import box_qp_admm  # noqa: E402
 
 import mink_warp as mw  # noqa: E402
-
-
-def _cuda_device():
-    for d in wp.get_devices():
-        if d.is_cuda:
-            return str(d)
-    return None
-
-
-_CUDA = _cuda_device()
-requires_cuda = pytest.mark.skipif(_CUDA is None, reason="requires CUDA (tile Cholesky)")
 
 DT = 0.02
 GAIN = 0.95
@@ -142,7 +130,7 @@ def test_assembly_unconstrained_matches_mink(arm_model):
 
 
 # --------------------------------------------------------------------------- #
-# CUDA: the real box-ADMM kernel
+# The real box-ADMM tile kernel (CPU or GPU)
 # --------------------------------------------------------------------------- #
 def _limited_dofs(model):
     import mujoco
@@ -159,12 +147,11 @@ def _limited_dofs(model):
     return np.array(dofs), np.array(los), np.array(his)
 
 
-@requires_cuda
 @pytest.mark.parametrize("admm_iters", [1, 5, 40])
 def test_feasible_when_pushed_into_limit(arm_model, admm_iters):
     q = np.array([2.9, 0.0])
     q_target = np.array([3.5, 0.3])
-    cfg = mw.Configuration(arm_model, q=q, nworld=1, device=_CUDA)
+    cfg = mw.Configuration(arm_model, q=q, nworld=1)
     task, _ = _posture_pushing_past_limit(arm_model, q, q_target)
 
     solver = mw.ConstrainedSolver(
@@ -187,11 +174,10 @@ def test_feasible_when_pushed_into_limit(arm_model, admm_iters):
     assert np.all(q_next[dofs] >= los - 1e-5)
 
 
-@requires_cuda
 def test_constrained_prevents_unconstrained_violation(arm_model):
     q = np.array([2.9, 0.0])
     q_target = np.array([3.5, 0.3])
-    cfg = mw.Configuration(arm_model, q=q, nworld=1, device=_CUDA)
+    cfg = mw.Configuration(arm_model, q=q, nworld=1)
     task, _ = _posture_pushing_past_limit(arm_model, q, q_target)
 
     hi_lim = float(arm_model.jnt_range[0][1])  # joint1 upper limit (3.14)
@@ -210,12 +196,11 @@ def test_constrained_prevents_unconstrained_violation(arm_model):
     assert (q + v_con * DT)[0] < (q + v_unc * DT)[0]
 
 
-@requires_cuda
 def test_matches_mink_daqp_active_limit(arm_model):
     q = np.array([2.9, 0.0])
     q_target = np.array([3.5, 0.3])
     damping = 1e-6
-    cfg = mw.Configuration(arm_model, q=q, nworld=1, device=_CUDA)
+    cfg = mw.Configuration(arm_model, q=q, nworld=1)
     mw_task, mk_task = _posture_pushing_past_limit(arm_model, q, q_target)
 
     cs = mw.ConstrainedSolver(
@@ -238,11 +223,10 @@ def test_matches_mink_daqp_active_limit(arm_model):
     np.testing.assert_allclose(v_wp, v_mk, atol=1e-4)
 
 
-@requires_cuda
 def test_velocity_limit_respected(arm_model):
     q = np.array([0.4, -0.7])
     q_target = np.array([2.0, 1.5])  # large move -> velocity box binds
-    cfg = mw.Configuration(arm_model, q=q, nworld=1, device=_CUDA)
+    cfg = mw.Configuration(arm_model, q=q, nworld=1)
     task, _ = _posture_pushing_past_limit(arm_model, q, q_target)
 
     vmax = 1.0
@@ -256,11 +240,10 @@ def test_velocity_limit_respected(arm_model):
     assert np.all(np.abs(dq) <= DT * vmax + 1e-6)
 
 
-@requires_cuda
 def test_batched_independent_feasibility(arm_model):
     q0 = np.array([2.95, 0.0])
     q1 = np.array([0.0, -2.95])
-    cfg = mw.Configuration(arm_model, q=np.stack([q0, q1]), nworld=2, device=_CUDA)
+    cfg = mw.Configuration(arm_model, q=np.stack([q0, q1]), nworld=2)
     t0 = mw.PostureTask(arm_model, cost=1.0)
     t0.set_target(np.array([3.5, 0.5]))
     v = mw.ConstrainedSolver(
@@ -274,11 +257,10 @@ def test_batched_independent_feasibility(arm_model):
         assert np.all(q_next[dofs] >= los - 1e-5)
 
 
-@requires_cuda
 def test_gpu_kernel_matches_numpy_reference(arm_model):
     q = np.array([2.9, 0.0])
     q_target = np.array([3.5, 0.3])
-    cfg = mw.Configuration(arm_model, q=q, nworld=1, device=_CUDA)
+    cfg = mw.Configuration(arm_model, q=q, nworld=1)
     task, _ = _posture_pushing_past_limit(arm_model, q, q_target)
     cs = mw.ConstrainedSolver(
         cfg, limits=[mw.ConfigurationLimit(arm_model, gain=GAIN)], admm_iters=200

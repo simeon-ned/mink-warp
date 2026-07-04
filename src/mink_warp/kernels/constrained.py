@@ -76,7 +76,7 @@ def config_limit_box(
 
 
 @wp.kernel
-def compute_rho_mean_diag(
+def compute_rho(
     H: wp.array3d[float],
     nv: int,
     rho_scale: float,
@@ -84,18 +84,25 @@ def compute_rho_mean_diag(
     rho_max: float,
     rho_out: wp.array[float],
 ):
-    """Per-world ADMM penalty ``rho = clamp(rho_scale*mean(diag H), min, max)``.
+    """Per-world ADMM penalty ``rho = clamp(rho_scale*sqrt(dmin*dmax), min, max)``.
 
-    Scaling to the Hessian's diagonal keeps convergence robust across scenes
-    (panda vs g1 differ in H magnitude) while staying branchless and device-side
-    (graph-capturable, no host fill). rho only affects convergence *speed* — the
-    ADMM fixed point is the true QP optimum regardless of rho.
+    ``dmin``/``dmax`` are the smallest/largest diagonal entries of ``H``, so
+    their geometric mean approximates ``sqrt(lambda_min*lambda_max)`` — the
+    rho that minimises ADMM's condition number and thus its iteration count.
+    This self-scales across scenes (a well-conditioned 2-dof arm and a rank-
+    deficient 9-dof panda need very different absolute rho) while staying
+    branchless and device-side (graph-capturable). rho only affects convergence
+    *speed*; the ADMM fixed point is the true QP optimum regardless.
     """
     worldid = wp.tid()
-    s = float(0.0)
-    for i in range(nv):
-        s += H[worldid, i, i]
-    rho_out[worldid] = wp.clamp(rho_scale * s / float(nv), rho_min, rho_max)
+    dmin = H[worldid, 0, 0]
+    dmax = H[worldid, 0, 0]
+    for i in range(1, nv):
+        d = H[worldid, i, i]
+        dmin = wp.min(dmin, d)
+        dmax = wp.max(dmax, d)
+    g = wp.sqrt(wp.max(dmin, 0.0) * wp.max(dmax, 0.0))
+    rho_out[worldid] = wp.clamp(rho_scale * g, rho_min, rho_max)
 
 
 @wp.kernel

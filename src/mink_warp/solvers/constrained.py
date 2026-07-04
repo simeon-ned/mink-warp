@@ -25,7 +25,7 @@ import warp as wp
 
 from ..configuration import Configuration
 from ..kernels.constrained import (
-    compute_rho_mean_diag,
+    compute_rho,
     get_admm_box_kernel,
     init_box,
     launch_admm_box_solve,
@@ -66,7 +66,7 @@ class ConstrainedSolver(Solver):
         configuration: Configuration,
         limits: Sequence[Limit] | None = None,
         *,
-        admm_iters: int = 20,
+        admm_iters: int = 30,
         rho_scale: float = 1.0,
         rho_min: float = 1e-6,
         rho_max: float = 1e6,
@@ -226,7 +226,7 @@ class ConstrainedSolver(Solver):
                 limit.apply_box(cfg, dt, self.lo, self.hi)
             # --- Per-world ADMM penalty. ---
             wp.launch(
-                compute_rho_mean_diag,
+                compute_rho,
                 dim=nworld,
                 inputs=[
                     self.H,
