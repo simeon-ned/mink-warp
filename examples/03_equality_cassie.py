@@ -1,10 +1,10 @@
-"""Batched Cassie IK with equality constraint task (closed-chain four-bars).
+"""Cassie IK with equality constraint task (closed-chain four-bars).
 
 Each biped gets a phase-offset COM bob while feet stay pinned; mjviser grid view.
 
 Run:
   uv sync --extra dev --extra examples
-  uv run examples/equality_cassie.py
+  uv run examples/03_equality_cassie.py
 """
 
 from __future__ import annotations
@@ -19,6 +19,8 @@ import viser
 from mjviser import ViserMujocoScene
 
 import mink_warp as mw
+
+from _viser_utils import grid_origins
 
 NUM_WORLDS = 128
 DT = 0.01
@@ -78,7 +80,7 @@ def main() -> None:
     com.set_target(base_com, configuration=cfg)
 
     origins = _grid_origins(NUM_WORLDS, ENV_SPACING)
-    server = viser.ViserServer(label="mink-warp batched Cassie (equality)")
+    server = viser.ViserServer(label="mink-warp Cassie (equality)")
     scene = ViserMujocoScene(server, model, num_envs=NUM_WORLDS)
     extent = float(np.max(np.linalg.norm(origins[:, :2], axis=1)) + ENV_SPACING)
     if hasattr(scene, "create_scene_gui"):

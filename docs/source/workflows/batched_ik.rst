@@ -53,8 +53,8 @@ Full batched examples with mjviser:
 .. code-block:: bash
 
    uv sync --extra examples
-   uv run examples/batched_panda_ik.py
-   uv run examples/batched_g1_ik.py
+   uv run examples/01_panda_ik.py
+   uv run examples/05_relative_frame_g1.py
 
 Assets live under ``examples/franka_emika_panda/`` and ``examples/unitree_g1/``.
 
@@ -62,7 +62,7 @@ Performance notes
 -----------------
 
 - Prefer keeping ``q``, targets, and task buffers on device across steps.
-- Re-upload targets only when they change (see G1 demo resample cadence).
+- Re-upload targets only when they change (see ``05_relative_frame_g1.py``).
 - Cholesky tile solve cost is ~flat in ``nworld``; FK + Jacobian assembly often
   dominate at moderate ``nv`` (see :doc:`../benchmarks`).
 

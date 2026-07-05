@@ -44,7 +44,7 @@ Optional extras
    * - ``dev``
      - pytest, ruff, mink (parity tests)
    * - ``examples``
-     - mjviser + viser for batched Panda / G1 demos
+     - mjviser + viser for Panda / G1 demos
    * - ``docs``
      - Sphinx site (``make docs``)
 

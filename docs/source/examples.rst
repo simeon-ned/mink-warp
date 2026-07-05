@@ -3,10 +3,11 @@
 Examples
 ========
 
-Runnable scripts ship under ``examples/``. Assets are vendored from Mink.
+Runnable scripts ship under ``examples/`` (numbered by increasing complexity).
+Assets are vendored from Mink.
 
-Batched visualization (mjviser)
--------------------------------
+Visualization (mjviser)
+-----------------------
 
 .. list-table::
    :header-rows: 1
@@ -14,16 +15,22 @@ Batched visualization (mjviser)
 
    * - Script
      - Description
-   * - ``examples/batched_panda_ik.py``
-     - 512 Panda arms, circular EE targets, CUDA graph
-   * - ``examples/batched_g1_ik.py``
-     - Multi-G1 hands/feet/torso targets, periodic resample
+   * - ``examples/01_panda_ik.py``
+     - Panda EE tracking, soft joint limits, CUDA graph
+   * - ``examples/02_constrained_ur5e.py``
+     - Hard limits: configuration, collision avoidance, velocity cap
+   * - ``examples/03_equality_cassie.py``
+     - Closed-chain equality constraints, feet pinned, COM bob
+   * - ``examples/04_self_collision_dual_iiwa.py``
+     - Dual Kuka arms, inter-arm collision avoidance
+   * - ``examples/05_relative_frame_g1.py``
+     - G1 humanoid: RelativeFrameTask, squat, hand motion, collision
 
 .. code-block:: bash
 
    uv sync --extra examples
-   uv run examples/batched_panda_ik.py
-   uv run examples/batched_g1_ik.py
+   uv run examples/01_panda_ik.py
+   uv run examples/05_relative_frame_g1.py
 
 Documentation examples
 ----------------------

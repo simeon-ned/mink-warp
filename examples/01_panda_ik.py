@@ -1,10 +1,10 @@
-"""Batched differential IK on Franka Emika Panda, visualized with mjviser.
+"""Differential IK on Franka Emika Panda, visualized with mjviser.
 
 Phase-offset circular EE trajectories with a small z bob.
 
 Run:
   uv sync --extra dev --extra examples
-  uv run examples/batched_panda_ik.py
+  uv run examples/01_panda_ik.py
 """
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ def main() -> None:
         origins[i, 0] = (c - 0.5 * (cols - 1)) * ENV_SPACING
         origins[i, 1] = (r - 0.5 * (rows - 1)) * ENV_SPACING
 
-    server = viser.ViserServer(label="mink-warp batched Panda IK")
+    server = viser.ViserServer(label="mink-warp Panda IK")
     scene = ViserMujocoScene(server, model, num_envs=NUM_WORLDS)
     extent = float(np.max(np.linalg.norm(origins[:, :2], axis=1)) + ENV_SPACING)
     if hasattr(scene, "create_scene_gui"):

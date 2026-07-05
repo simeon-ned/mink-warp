@@ -1,18 +1,23 @@
-"""Batched G1: RelativeFrameTask + collision limits, mjviser grid.
+"""G1: RelativeFrameTask + collision limits, mjviser grid.
 
 Right palm traces a world-space circle; left palm tracks a torso-relative wave.
 Per-env phase offsets drive squat and hand motion.
 
 Run:
   uv sync --extra dev --extra examples
-  uv run examples/relative_frame_g1.py
+  uv run examples/05_relative_frame_g1.py
 """
 
 from __future__ import annotations
 
 import math
+import sys
 import time
 from pathlib import Path
+
+_EXAMPLES = Path(__file__).resolve().parent
+if str(_EXAMPLES) not in sys.path:
+    sys.path.insert(0, str(_EXAMPLES))
 
 import mujoco
 import numpy as np
@@ -22,7 +27,9 @@ from mjviser import ViserMujocoScene
 import mink_warp as mw
 from mink_warp.lie import SE3
 
-NUM_WORLDS = 96
+from _viser_utils import grid_origins, sync_scene, warmup_solver
+
+NUM_WORLDS = 512
 DT = 0.01
 FREQUENCY = 50.0
 ENV_SPACING = 2.0
@@ -34,17 +41,6 @@ CIRCLE_FREQ = 0.8
 WAVE_RADIUS = 0.04
 WAVE_FREQ = 0.8
 WAVE_Y_OFFSET = 0.05
-
-
-def _grid_origins(n: int, spacing: float) -> np.ndarray:
-    cols = math.ceil(math.sqrt(n))
-    rows = math.ceil(n / cols)
-    origins = np.zeros((n, 3), dtype=np.float32)
-    for i in range(n):
-        r, c = divmod(i, cols)
-        origins[i, 0] = (c - 0.5 * (cols - 1)) * spacing
-        origins[i, 1] = (r - 0.5 * (rows - 1)) * spacing
-    return origins
 
 
 def main() -> None:
@@ -108,9 +104,12 @@ def main() -> None:
         "left_palm", "site", "torso_link", "body",
     ).numpy().copy()
 
-    origins = _grid_origins(NUM_WORLDS, ENV_SPACING)
-    server = viser.ViserServer(label="mink-warp batched G1 (RelativeFrameTask)")
+    origins = grid_origins(NUM_WORLDS, ENV_SPACING)
+    warmup_solver(solver, tasks, DT, label="ConstrainedSolver")
+
+    server = viser.ViserServer(label="mink-warp G1 (RelativeFrameTask)")
     scene = ViserMujocoScene(server, model, num_envs=NUM_WORLDS)
+    sync_scene(scene, cfg, origins)
     extent = float(np.max(np.linalg.norm(origins[:, :2], axis=1)) + ENV_SPACING)
     if hasattr(scene, "create_scene_gui"):
         scene.create_scene_gui(
@@ -156,9 +155,7 @@ def main() -> None:
 
             solver.solve_and_integrate(tasks, DT, iterations=1, use_graph=False)
 
-            xpos = cfg.wp_data.xpos.numpy().copy()
-            xpos += origins[:, None, :]
-            scene.update_from_arrays(xpos, cfg.wp_data.xmat.numpy(), qpos=cfg.q.numpy())
+            sync_scene(scene, cfg, origins)
 
             dt_loop = time.time() - t0
             if dt_loop < 1.0 / FREQUENCY:

@@ -1,17 +1,22 @@
-"""Batched UR5e IK with hard limits: config, collision avoidance, velocity cap.
+"""UR5e IK with hard limits: config, collision avoidance, velocity cap.
 
 Phase-offset EE circles; each arm is spaced on a grid and visualized with mjviser.
 
 Run:
   uv sync --extra dev --extra examples
-  uv run examples/constrained_ur5e.py
+  uv run examples/02_constrained_ur5e.py
 """
 
 from __future__ import annotations
 
 import math
+import sys
 import time
 from pathlib import Path
+
+_EXAMPLES = Path(__file__).resolve().parent
+if str(_EXAMPLES) not in sys.path:
+    sys.path.insert(0, str(_EXAMPLES))
 
 import mujoco
 import numpy as np
@@ -20,7 +25,9 @@ from mjviser import ViserMujocoScene
 
 import mink_warp as mw
 
-NUM_WORLDS = 128
+from _viser_utils import grid_origins, sync_scene, warmup_solver
+
+NUM_WORLDS = 256
 DT = 0.01
 FREQUENCY = 50.0
 ENV_SPACING = 1.4
@@ -28,17 +35,6 @@ AMP_XY = 0.08
 AMP_Z = 0.04
 FREQ_XY = 0.25
 FREQ_Z = 0.4
-
-
-def _grid_origins(n: int, spacing: float) -> np.ndarray:
-    cols = math.ceil(math.sqrt(n))
-    rows = math.ceil(n / cols)
-    origins = np.zeros((n, 3), dtype=np.float32)
-    for i in range(n):
-        r, c = divmod(i, cols)
-        origins[i, 0] = (c - 0.5 * (cols - 1)) * spacing
-        origins[i, 1] = (r - 0.5 * (rows - 1)) * spacing
-    return origins
 
 
 def main() -> None:
@@ -54,10 +50,11 @@ def main() -> None:
 
     ee = mw.FrameTask(
         "attachment_site", "site",
-        position_cost=1.0, orientation_cost=1.0, lm_damping=1e-6,
+        position_cost=1.0, orientation_cost=1.0,
+        gain=0.8, lm_damping=1.0,
     )
-    posture = mw.PostureTask(model, cost=1e-3)
-    posture.set_target(cfg.q)
+    posture = mw.PostureTask(model, cost=1e-2)
+    posture.set_target_from_configuration(cfg)
 
     limits = [
         mw.ConfigurationLimit(model),
@@ -83,9 +80,12 @@ def main() -> None:
     base_ee = cfg.get_transform_frame_to_world("attachment_site", "site").numpy().copy()
     ee.set_target(base_ee, configuration=cfg)
 
-    origins = _grid_origins(NUM_WORLDS, ENV_SPACING)
-    server = viser.ViserServer(label="mink-warp batched UR5e (constrained)")
+    origins = grid_origins(NUM_WORLDS, ENV_SPACING)
+    warmup_solver(solver, tasks, DT, label="ConstrainedSolver")
+
+    server = viser.ViserServer(label="mink-warp UR5e (constrained)")
     scene = ViserMujocoScene(server, model, num_envs=NUM_WORLDS)
+    sync_scene(scene, cfg, origins)
     extent = float(np.max(np.linalg.norm(origins[:, :2], axis=1)) + ENV_SPACING)
     if hasattr(scene, "create_scene_gui"):
         scene.create_scene_gui(
@@ -113,9 +113,7 @@ def main() -> None:
 
             solver.solve_and_integrate(tasks, DT, iterations=1, use_graph=False)
 
-            xpos = cfg.wp_data.xpos.numpy().copy()
-            xpos += origins[:, None, :]
-            scene.update_from_arrays(xpos, cfg.wp_data.xmat.numpy(), qpos=cfg.q.numpy())
+            sync_scene(scene, cfg, origins)
 
             dt_loop = time.time() - t0
             if dt_loop < 1.0 / FREQUENCY:

@@ -19,3 +19,4 @@ docs/_build/
 
 # Personal / pre-public notes (local only)
 docs/PUBLIC_RELEASE.md
+MUJOCO_LOG.TXT
