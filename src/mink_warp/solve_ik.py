@@ -63,7 +63,11 @@ def solve_ik(
     ``limits`` enforces hard joint limits via a :class:`ConstrainedSolver`
     (mink-shaped): ``None`` uses the default :class:`ConfigurationLimit`, a list
     supplies specific limits, ``[]`` disables them. If ``limits`` is omitted the
-    historical unconstrained behaviour is kept. Ignored when ``solver`` is given.
+    historical unconstrained behaviour is kept. ``limits`` is honoured only on
+    the auto-build path (``solver=None``); passing it together with an explicit
+    ``solver`` raises rather than silently dropping it — a cost-only backend
+    cannot enforce limits, and an explicit :class:`ConstrainedSolver` already has
+    its limits fixed at construction.
     """
     if solver is None:
         if limits is _UNSET:
@@ -75,8 +79,22 @@ def solve_ik(
                 limits=None if limits is None else list(limits),
                 **cs_kwargs,
             )
-    elif solver.configuration is not configuration:
-        raise ValueError("solver was created for a different Configuration")
+    else:
+        if solver.configuration is not configuration:
+            raise ValueError("solver was created for a different Configuration")
+        if limits is not _UNSET:
+            if not getattr(solver, "supports_limits", False):
+                raise ValueError(
+                    f"{type(solver).__name__} does not support limits (it is a "
+                    f"cost-only backend); pass a ConstrainedSolver, or omit the "
+                    f"solver= argument to build one automatically from limits=."
+                )
+            raise ValueError(
+                "limits= is honoured only when the solver is auto-built "
+                "(solver=None); an explicit ConstrainedSolver already has its "
+                "limits fixed at construction. Drop limits= here, or configure "
+                "them on the solver you pass in."
+            )
     if isinstance(solver, (LMSolver, LBFGSSolver)):
         return solver.solve_and_integrate(tasks, dt)
     return solver.solve(tasks, dt, damping=damping)

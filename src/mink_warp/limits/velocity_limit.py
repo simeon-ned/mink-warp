@@ -14,7 +14,7 @@ import numpy.typing as npt
 import warp as wp
 
 from ..configuration import Configuration
-from ..kernels.constrained import velocity_limit_box
+from ..kernels.constrained import velocity_limit_box, velocity_limit_ineq
 from .limit import Limit
 
 _SCALAR_JOINTS = (mujoco.mjtJoint.mjJNT_HINGE, mujoco.mjtJoint.mjJNT_SLIDE)
@@ -46,6 +46,8 @@ class VelocityLimit(Limit):
 
         self.model = model
         self.nb = len(dofadr)
+        # Dense inequality form: +-e_i dq <= dt*vmax -> two rows per bounded dof.
+        self.n_inequalities = 2 * self.nb
         self._dofadr_np = np.asarray(dofadr, dtype=np.int32)
         self._vmax_np = np.asarray(vmax, dtype=np.float32)
         self._dev: dict[str, tuple[wp.array, wp.array]] = {}
@@ -79,4 +81,24 @@ class VelocityLimit(Limit):
                 dim=configuration.nworld,
                 inputs=[dofadr, vmax, float(dt), self.nb],
                 outputs=[lo, hi],
+            )
+
+    def scatter_inequalities(
+        self,
+        configuration: Configuration,
+        dt: float,
+        row_offset: int,
+        G: wp.array,
+        h: wp.array,
+    ) -> None:
+        if self.nb == 0:
+            return
+        device = configuration.device
+        dofadr, vmax = self._ensure_dev(device)
+        with wp.ScopedDevice(device):
+            wp.launch(
+                velocity_limit_ineq,
+                dim=configuration.nworld,
+                inputs=[dofadr, vmax, float(dt), self.nb, int(row_offset)],
+                outputs=[G, h],
             )
