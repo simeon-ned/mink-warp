@@ -311,25 +311,47 @@ def linear_ineq_scatter(
 
 
 @wp.kernel
-def scatter_ineq_block(
-    g_src: wp.array3d[float],  # (nworld, m_rows, nv) per-world rows
-    h_src: wp.array2d[float],  # (nworld, m_rows)
+def reset_ineq_block(
     row_offset: int,
     G: wp.array3d[float],
     h: wp.array2d[float],
 ):
-    """Copy a per-world dense block into ``G``/``h`` at ``row_offset``.
+    """Reset a ``(nworld, m)`` row block of ``G``/``h`` to inert (``0``, ``BOX_INF``).
 
-    Lets a host-built collision block be uploaded once (into ``g_src``/``h_src``)
-    and placed on device without downloading and re-uploading the whole padded
-    ``G`` buffer every step.
+    Launched over ``dim=(nworld, m)``. Lets a limit clear its own block on device
+    (self-contained) so the host only has to upload the few *active* rows.
     """
     worldid, i = wp.tid()
     nv = G.shape[2]
     r = row_offset + i
-    h[worldid, r] = h_src[worldid, i]
+    h[worldid, r] = float(BOX_INF)
     for j in range(nv):
-        G[worldid, r, j] = g_src[worldid, i, j]
+        G[worldid, r, j] = 0.0
+
+
+@wp.kernel
+def scatter_ineq_active(
+    aw: wp.array[int],  # (K,) world of each active row
+    aidx: wp.array[int],  # (K,) row index within the block
+    ag: wp.array2d[float],  # (K, nv) row coefficients
+    ah: wp.array[float],  # (K,) bound
+    row_offset: int,
+    G: wp.array3d[float],
+    h: wp.array2d[float],
+):
+    """Scatter ``K`` host-built active rows into ``G``/``h`` at ``row_offset``.
+
+    Only the active (near-collision) rows are uploaded and written — the inert
+    rows stay at whatever :func:`reset_ineq_block` left — so per step the host →
+    device traffic is ``K*(nv+1)`` floats instead of the whole padded block.
+    """
+    k = wp.tid()
+    nv = G.shape[2]
+    w = aw[k]
+    r = row_offset + aidx[k]
+    h[w, r] = ah[k]
+    for j in range(nv):
+        G[w, r, j] = ag[k, j]
 
 
 # Cache of (nv, m, iters)-specialised inequality-ADMM kernels.

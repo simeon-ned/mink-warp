@@ -11,7 +11,7 @@ import warp as wp
 
 from ..configuration import Configuration
 from ..kernels.collision import collision_broadphase
-from ..kernels.constrained import scatter_ineq_block
+from ..kernels.constrained import reset_ineq_block, scatter_ineq_active
 from .limit import Limit
 
 Geom = int | str
@@ -94,11 +94,8 @@ class CollisionAvoidanceLimit(Limit):
         self.max_num_contacts = len(self.geom_id_pairs)
         self.n_inequalities = self.max_num_contacts
         self._host_data = mujoco.MjData(model)
-        # Persistent device staging buffers for the host-built collision block +
-        # broadphase prefilter, allocated on first scatter (keyed by device +
-        # nworld).
-        self._g_dev: wp.array | None = None
-        self._h_dev: wp.array | None = None
+        # Persistent device buffers for the broadphase prefilter, allocated on
+        # first scatter (keyed by device + nworld).
         self._world_any: wp.array | None = None
         self._candidate: wp.array | None = None
         self._pair_g1_dev: wp.array | None = None
@@ -125,8 +122,6 @@ class CollisionAvoidanceLimit(Limit):
         self._ensure_dev_stage(device, nworld)
 
         q_np = configuration.q.numpy()
-        g_np = np.zeros((nworld, m, nv), dtype=np.float32)
-        h_np = np.full((nworld, m), np.inf, dtype=np.float32)
         distmax = self.collision_detection_distance
         min_dist = self.minimum_distance_from_collisions
         gain = self.gain
@@ -146,6 +141,13 @@ class CollisionAvoidanceLimit(Limit):
         normal = np.empty(3)
         jac1 = np.empty((3, nv))
         jac2 = np.empty((3, nv))
+        # Collect only the ACTIVE (near-collision) rows; the rest of the block
+        # stays inert, so per step only these few rows (not the whole padded
+        # block) cross host -> device.
+        aw: list[int] = []
+        aidx: list[int] = []
+        ag: list[np.ndarray] = []
+        ah: list[float] = []
         for w in worlds:
             data.qpos[:] = q_np[w]
             # Collision rows need only geom poses (mj_kinematics) and the dof
@@ -165,24 +167,35 @@ class CollisionAvoidanceLimit(Limit):
                 row = _compute_contact_normal_jacobian(
                     model, data, geom1_id, geom2_id, fromto, normal, jac1, jac2
                 )
-                if dist > min_dist:
-                    h_np[w, idx] = (gain * (dist - min_dist) / dt) + relaxation
-                else:
-                    h_np[w, idx] = relaxation
+                h_val = (
+                    (gain * (dist - min_dist) / dt) + relaxation
+                    if dist > min_dist
+                    else relaxation
+                )
                 sign = -1.0 if dist >= 0 else 1.0
-                g_np[w, idx] = sign * row.astype(np.float32)
+                aw.append(w)
+                aidx.append(int(idx))
+                ag.append(sign * row)
+                ah.append(h_val)
 
-        # Upload only the collision block and scatter it into G/h at row_offset,
-        # instead of downloading + re-uploading the whole padded QP buffer.
+        # Reset this limit's block to inert (0, +inf) on device, then scatter only
+        # the K active rows (K*(nv+1) floats) — no full (nworld, m, nv) upload.
         with wp.ScopedDevice(device):
-            self._g_dev.assign(g_np)
-            self._h_dev.assign(h_np)
             wp.launch(
-                scatter_ineq_block,
-                dim=(nworld, m),
-                inputs=[self._g_dev, self._h_dev, int(row_offset)],
-                outputs=[G, h],
+                reset_ineq_block, dim=(nworld, m),
+                inputs=[int(row_offset)], outputs=[G, h],
             )
+            k = len(aw)
+            if k:
+                aw_d = wp.array(np.asarray(aw, dtype=np.int32), dtype=wp.int32)
+                aidx_d = wp.array(np.asarray(aidx, dtype=np.int32), dtype=wp.int32)
+                ag_d = wp.array(np.asarray(ag, dtype=np.float32), dtype=float)
+                ah_d = wp.array(np.asarray(ah, dtype=np.float32), dtype=float)
+                wp.launch(
+                    scatter_ineq_active, dim=k,
+                    inputs=[aw_d, aidx_d, ag_d, ah_d, int(row_offset)],
+                    outputs=[G, h],
+                )
 
     def _prefilter(self, configuration: Configuration):
         """Device broadphase over the batched ``geom_xpos``.
@@ -239,10 +252,6 @@ class CollisionAvoidanceLimit(Limit):
         if self._dev_key == key:
             return
         with wp.ScopedDevice(device):
-            self._g_dev = wp.zeros(
-                (nworld, self.max_num_contacts, self.model.nv), dtype=float
-            )
-            self._h_dev = wp.zeros((nworld, self.max_num_contacts), dtype=float)
             self._world_any = wp.zeros(nworld, dtype=wp.int32)
             self._candidate = wp.zeros(
                 (nworld, self.max_num_contacts), dtype=wp.int32

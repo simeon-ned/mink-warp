@@ -144,22 +144,35 @@ def test_device_prefilter_is_output_invariant():
     assert np.all(candidate[survivors].any(axis=1))
 
 
-def test_scatter_ineq_block_places_at_offset():
-    from mink_warp.kernels.constrained import scatter_ineq_block
+def test_reset_and_scatter_active_place_rows():
+    from mink_warp.kernels.constrained import (
+        BOX_INF,
+        reset_ineq_block,
+        scatter_ineq_active,
+    )
 
-    nworld, m, nv, off, total = 3, 2, 4, 5, 9
-    rng = np.random.default_rng(1)
-    g_src = rng.standard_normal((nworld, m, nv)).astype(np.float32)
-    h_src = rng.standard_normal((nworld, m)).astype(np.float32)
+    nworld, m, nv, off, total = 3, 4, 5, 2, 9
+    # two active rows: (world 0, block-row 1), (world 2, block-row 3)
+    aw = np.array([0, 2], dtype=np.int32)
+    aidx = np.array([1, 3], dtype=np.int32)
+    ag = np.arange(2 * nv, dtype=np.float32).reshape(2, nv) + 1.0
+    ah = np.array([0.7, -0.3], dtype=np.float32)
     with wp.ScopedDevice(None):
-        gsd = wp.array(g_src, dtype=float)
-        hsd = wp.array(h_src, dtype=float)
-        G = wp.zeros((nworld, total, nv), dtype=float)
-        h = wp.zeros((nworld, total), dtype=float)
-        wp.launch(scatter_ineq_block, dim=(nworld, m),
-                  inputs=[gsd, hsd, off], outputs=[G, h])
+        G = wp.array(np.full((nworld, total, nv), 5.0, dtype=np.float32), dtype=float)
+        h = wp.array(np.full((nworld, total), 5.0, dtype=np.float32), dtype=float)
+        wp.launch(reset_ineq_block, dim=(nworld, m), inputs=[off], outputs=[G, h])
+        wp.launch(scatter_ineq_active, dim=2,
+                  inputs=[wp.array(aw, dtype=wp.int32), wp.array(aidx, dtype=wp.int32),
+                          wp.array(ag, dtype=float), wp.array(ah, dtype=float), off],
+                  outputs=[G, h])
     Gn, hn = G.numpy(), h.numpy()
-    np.testing.assert_allclose(Gn[:, off:off + m, :], g_src, atol=0)
-    np.testing.assert_allclose(hn[:, off:off + m], h_src, atol=0)
-    # Rows outside the block are untouched (still zero).
-    assert np.all(Gn[:, :off, :] == 0) and np.all(Gn[:, off + m:, :] == 0)
+    # reset made the whole block inert (0 / BOX_INF)...
+    box_inf = float(BOX_INF.val) if hasattr(BOX_INF, "val") else 1.0e9
+    assert np.all(Gn[1, off:off + m, :] == 0)  # untouched world stays inert
+    assert np.all(hn[1, off:off + m] == box_inf)
+    # ...then the two active rows were written.
+    np.testing.assert_allclose(Gn[0, off + 1, :], ag[0], atol=0)
+    np.testing.assert_allclose(Gn[2, off + 3, :], ag[1], atol=0)
+    assert hn[0, off + 1] == np.float32(0.7) and hn[2, off + 3] == np.float32(-0.3)
+    # rows outside the block are untouched (original 5.0).
+    assert np.all(Gn[:, :off, :] == 5.0) and np.all(Gn[:, off + m:, :] == 5.0)
