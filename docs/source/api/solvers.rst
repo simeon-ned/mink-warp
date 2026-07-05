@@ -4,27 +4,31 @@ Solvers
 Base
 ----
 
-.. autoclass:: mink_warp.solvers.base.Solver
+.. autoclass:: mink_warp.Solver
    :members:
 
 Backends
 --------
 
-.. autoclass:: mink_warp.solvers.DLSSolver
+.. autoclass:: mink_warp.DLSSolver
    :members:
 
-.. autoclass:: mink_warp.solvers.LMSolver
+.. autoclass:: mink_warp.LMSolver
    :members:
 
-.. autoclass:: mink_warp.solvers.LBFGSSolver
+.. autoclass:: mink_warp.LBFGSSolver
    :members:
 
-.. autoclass:: mink_warp.solvers.ConstrainedSolver
+.. autoclass:: mink_warp.ConstrainedSolver
    :members:
 
 Factory
 -------
 
-.. autofunction:: mink_warp.solvers.make_solver
+.. autofunction:: mink_warp.make_solver
 
-.. autodata:: mink_warp.solvers.SOLVERS
+Registry
+--------
+
+``mink_warp.solvers.SOLVERS`` maps solver name strings to backend classes
+(``"dls"``, ``"lm"``, ``"lbfgs"``, ``"constrained"``).

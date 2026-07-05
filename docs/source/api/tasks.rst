@@ -4,38 +4,41 @@ Tasks
 Base classes
 ------------
 
-.. autoclass:: mink_warp.tasks.task.Task
+.. autoclass:: mink_warp.Task
    :members:
 
-.. autoclass:: mink_warp.tasks.task.TargetedTask
+.. autoclass:: mink_warp.tasks.TargetedTask
    :members:
 
 Kinematic tasks
 ---------------
 
-.. automodule:: mink_warp.tasks.frame_task
+.. autoclass:: mink_warp.FrameTask
    :members:
 
-.. automodule:: mink_warp.tasks.relative_frame_task
+.. autoclass:: mink_warp.RelativeFrameTask
    :members:
 
-.. automodule:: mink_warp.tasks.posture_task
+.. autoclass:: mink_warp.PostureTask
    :members:
 
-.. automodule:: mink_warp.tasks.equality_constraint_task
+.. autoclass:: mink_warp.EqualityConstraintTask
    :members:
 
-.. automodule:: mink_warp.tasks.com_task
+.. autoclass:: mink_warp.ComTask
    :members:
 
 Regularization
 --------------
 
-.. automodule:: mink_warp.tasks.damping_task
+.. autoclass:: mink_warp.DampingTask
    :members:
 
 Soft limits
 -----------
 
-.. automodule:: mink_warp.tasks.joint_limit_task
+.. autoclass:: mink_warp.JointLimitTask
+   :members:
+
+.. autoclass:: mink_warp.ConfigurationLimitTask
    :members:

@@ -5,8 +5,8 @@ Constrained IK (hard limits)
 
 Mink solves a **QP** each control step: minimise task error subject to hard
 inequalities ``G Δq ≤ h``. mink-warp mirrors that via
-:class:`~mink_warp.solvers.ConstrainedSolver` — a batched OSQP-style ADMM inner
-solve on the same normal equations as :class:`~mink_warp.solvers.DLSSolver`.
+:class:`~mink_warp.ConstrainedSolver` — a batched OSQP-style ADMM inner
+solve on the same normal equations as :class:`~mink_warp.DLSSolver`.
 
 Problem
 -------
@@ -31,11 +31,11 @@ Two solve paths (auto-selected)
      - When
      - Properties
    * - **Box ADMM**
-     - Every limit is a per-dof interval (:class:`~mink_warp.limits.ConfigurationLimit`,
-       :class:`~mink_warp.limits.VelocityLimit`) and ``use_inequalities=False``
+     - Every limit is a per-dof interval (:class:`~mink_warp.ConfigurationLimit`,
+       :class:`~mink_warp.VelocityLimit`) and ``use_inequalities=False``
      - Fast; **exact box feasibility at every ADMM iteration** (even if truncated)
    * - **General inequality ADMM**
-     - Any inequality-only limit (e.g. :class:`~mink_warp.limits.LinearInequalityLimit`),
+     - Any inequality-only limit (e.g. :class:`~mink_warp.LinearInequalityLimit`),
        or ``use_inequalities=True`` (re-expresses box limits as ``[P;-P]`` rows)
      - Reduced Schur-normal OSQP-ADMM; feasibility improves with ``admm_iters``
 
@@ -51,17 +51,17 @@ Built-in limits
 
    * - Limit
      - Form
-   * - :class:`~mink_warp.limits.ConfigurationLimit`
+   * - :class:`~mink_warp.ConfigurationLimit`
      - ``gain*(lower - q) ≤ Δq ≤ gain*(upper - q)`` per hinge/slide joint (Mink parity)
-   * - :class:`~mink_warp.limits.VelocityLimit`
+   * - :class:`~mink_warp.VelocityLimit`
      - ``|Δq_i| ≤ dt * v_max`` on bounded dofs
-   * - :class:`~mink_warp.limits.CollisionAvoidanceLimit`
+   * - :class:`~mink_warp.CollisionAvoidanceLimit`
      - Normal-velocity rows from ``mj_geomDistance`` (host query per world)
-   * - :class:`~mink_warp.limits.LinearInequalityLimit`
+   * - :class:`~mink_warp.LinearInequalityLimit`
      - Constant ``G Δq ≤ h`` (half-spaces, coupled bounds); **inequality-only**
 
-Each limit exposes either a **box** (:meth:`~mink_warp.limits.Limit.apply_box`) or
-**dense rows** (:meth:`~mink_warp.limits.Limit.scatter_inequalities`), matching
+Each limit exposes either a **box** (:meth:`~mink_warp.Limit.apply_box`) or
+**dense rows** (:meth:`~mink_warp.Limit.scatter_inequalities`), matching
 Mink's stacked ``G Δq ≤ h``. See :doc:`../api/limits`.
 
 Functional API (Mink-shaped)
@@ -143,8 +143,8 @@ Custom limits
 -------------
 
 For **configuration-dependent** rows (collision normals that move with ``q``),
-subclass :class:`~mink_warp.limits.Limit` and implement
-:meth:`~mink_warp.limits.Limit.scatter_inequalities` (set ``box_capable = False``
+subclass :class:`~mink_warp.Limit` and implement
+:meth:`~mink_warp.Limit.scatter_inequalities` (set ``box_capable = False``
 if there is no per-dof box form).
 
 Box vs general — when to care
@@ -172,4 +172,5 @@ Related
 - :doc:`solvers` — all backends
 - :doc:`../tutorial/tasks_and_limits` — soft vs hard limits
 - :doc:`../api/limits`
+- :doc:`../examples` — ``02_constrained_ur5e.py``, ``04_self_collision_dual_iiwa.py``
 - :doc:`../benchmarks`

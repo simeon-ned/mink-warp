@@ -47,7 +47,11 @@ Sidebar order: Getting Started → Concepts → User Guide → API Reference →
 Live signatures come from Google-style docstrings via Sphinx autodoc:
 
 - `docs/source/api/` — curated API index
-- Prefer explicit `autofunction` / `autoclass` over blanket `automodule`
+- Prefer explicit `autoclass` / `autofunction` / `autodata` over blanket `automodule`
+- Cross-references in prose use the **same qualified paths** as autodoc, e.g.
+  ``:class:`~mink_warp.FrameTask```, ``:class:`~mink_warp.CollisionAvoidanceLimit```
+  (top-level public imports, matching ``import mink_warp as mw``).
+- After API page changes, run a clean build: ``rm -rf docs/_build && make docs``
 
 When adding a public symbol, document it in source and list it on the matching API page.
 

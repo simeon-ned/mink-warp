@@ -1,11 +1,11 @@
 Lie groups
 ==========
 
-Host-side rigid-body helpers (Mink-compatible). Device kernels use
+Host-side rigid-body helpers (Mink-compatible). Device kernels live in
 ``mink_warp.lie.wp_ops``.
 
-.. automodule:: mink_warp.lie.se3
+.. autoclass:: mink_warp.SE3
    :members:
 
-.. automodule:: mink_warp.lie.so3
+.. autoclass:: mink_warp.SO3
    :members:

@@ -3,7 +3,7 @@
 CUDA graphs
 ===========
 
-For fixed task sets and timesteps, :class:`~mink_warp.solvers.DLSSolver` can
+For fixed task sets and timesteps, :class:`~mink_warp.DLSSolver` can
 capture a one-step ``solve_and_integrate`` graph to reduce launch overhead.
 
 Requirements
@@ -28,7 +28,7 @@ Usage
    while running:
        solver.solve_and_integrate(tasks, dt=0.01, use_graph=True)
 
-If tasks or ``dt`` change, call :meth:`~mink_warp.solvers.DLSSolver.invalidate_graph`
+If tasks or ``dt`` change, call :meth:`~mink_warp.DLSSolver.invalidate_graph`
 (or recreate the solver).
 
 Implementation notes

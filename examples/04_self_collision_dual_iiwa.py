@@ -36,7 +36,7 @@ from _viser_utils import (
 _IIWA_XML = _EXAMPLES / "kuka_iiwa_14" / "iiwa14.xml"
 _ARM_HOME_Q = np.array([0.0, 0.0, 0.0, -1.5708, 0.0, 1.5708, 0.0], dtype=np.float64)
 
-NUM_WORLDS = 32
+NUM_WORLDS = 128
 DT = 1.0 / 60.0
 FREQUENCY = 60.0
 ENV_SPACING = 2.0

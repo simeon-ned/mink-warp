@@ -37,16 +37,16 @@ Configuration
 Tasks
 -----
 
-Tasks inherit from :class:`~mink_warp.tasks.task.Task` or
-:class:`~mink_warp.tasks.task.TargetedTask`. Each implements
-:meth:`~mink_warp.tasks.task.Task.compute_residual`, returning weighted
+Tasks inherit from :class:`~mink_warp.Task` or
+:class:`~mink_warp.tasks.TargetedTask`. Each implements
+:meth:`~mink_warp.Task.compute_residual`, returning weighted
 Jacobian rows ``W``, error ``e``, and optional Levenberg–Marquardt damping
 ``mu`` — the same stacking convention as Mink [FrameTaskJacobian]_.
 
 Solvers
 -------
 
-Solver backends share :class:`~mink_warp.solvers.base.Solver`:
+Solver backends share :class:`~mink_warp.Solver`:
 
 .. list-table::
    :header-rows: 1
@@ -55,16 +55,16 @@ Solver backends share :class:`~mink_warp.solvers.base.Solver`:
    * - Backend
      - One step
      - Notes
-   * - ``DLSSolver`` (``IKSolver`` alias)
+   * - :class:`~mink_warp.DLSSolver` (``IKSolver`` alias)
      - :math:`v = \Delta q / dt` from damped normal equations
      - Default; optional CUDA graph
-   * - ``LMSolver``
+   * - :class:`~mink_warp.LMSolver`
      - LM step on configuration
      - Newton-style tiled Cholesky
-   * - ``LBFGSSolver``
+   * - :class:`~mink_warp.LBFGSSolver`
      - Quasi-Newton step
      - Multi-iter ``solve_and_integrate``
-   * - ``ConstrainedSolver``
+   * - :class:`~mink_warp.ConstrainedSolver`
      - Box or general ``G Δq ≤ h`` via ADMM
      - Mink QP equivalent; box path exactly feasible each iter
 
