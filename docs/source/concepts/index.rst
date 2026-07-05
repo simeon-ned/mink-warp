@@ -17,6 +17,8 @@ Suggested reading order
      - Page
    * - **Why this library**
      - :doc:`why_mink_warp` — purpose vs Newton IK and vs Mink
+   * - **Hard limits / QP**
+     - :doc:`../workflows/constrained` — box vs general ``G Δq ≤ h`` ADMM
    * - **Layer stack**
      - :doc:`architecture` — Configuration → tasks → solver → integrate
    * - **Mink compatibility**
@@ -35,7 +37,9 @@ Where to go next
 
    * - Need
      - Section
-   * - Solver choice (DLS / LM / L-BFGS / constrained)
+   * - Hard joint / velocity / half-space limits
+     - :doc:`../workflows/constrained`
+   * - Solver choice (DLS / LM / L-BFGS)
      - :doc:`../workflows/solvers`
    * - Fixed-step control loops
      - :doc:`../workflows/cuda_graphs`

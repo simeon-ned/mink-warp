@@ -20,11 +20,13 @@ mink-warp uses the same **tasks vs limits** split as Mink:
 
    .. grid-item-card:: **Limits** (hard constraints)
 
-      Enforced by :class:`~mink_warp.solvers.ConstrainedSolver` (box-QP).
-      The returned step never violates the intersection of active limits.
+      Enforced by :class:`~mink_warp.solvers.ConstrainedSolver` via ADMM on the
+      same :math:`H, c` as DLS. Mink's ``G Δq ≤ h`` form; two GPU paths (box /
+      general inequality).
 
       - :class:`~mink_warp.limits.ConfigurationLimit` — joint bounds
       - :class:`~mink_warp.limits.VelocityLimit` — per-step velocity cap
+      - :class:`~mink_warp.limits.LinearInequalityLimit` — constant half-spaces
 
 Frame task
 ----------
@@ -62,17 +64,38 @@ Center of mass
 Soft vs hard joint limits
 -------------------------
 
-**Soft** (always-on penalty, unconstrained DLS):
+**Soft** (penalty in the task stack, unconstrained DLS):
 
 .. code-block:: python
 
    soft = mw.JointLimitTask(model, cost=10.0)
 
-**Hard** (never violate bounds):
+**Hard** (never violate bounds — Mink ``limits=None`` default):
 
 .. code-block:: python
 
+   v = mw.solve_ik(cfg, tasks, dt, limits=None)  # default ConfigurationLimit
+
+   # or explicit
    v = mw.solve_ik(cfg, tasks, dt, limits=[mw.ConfigurationLimit(model)])
+
+Hard velocity cap
+-----------------
+
+.. code-block:: python
+
+   limits = [
+       mw.ConfigurationLimit(model),
+       mw.VelocityLimit(model, 3.0),
+   ]
+   v = mw.solve_ik(cfg, tasks, dt, limits=limits)
+
+General inequalities
+--------------------
+
+For half-spaces or coupled bounds that are not a per-dof box, use
+:class:`~mink_warp.LinearInequalityLimit` or subclass :class:`~mink_warp.limits.Limit`.
+See :doc:`../workflows/constrained` for the box vs general ADMM paths and tuning.
 
 Typical stack
 -------------
@@ -84,5 +107,5 @@ Typical stack
    solver = mw.ConstrainedSolver(cfg, limits=limits)
    solver.solve_and_integrate(tasks, dt=0.01)
 
-See :doc:`../workflows/solvers` for backend details and :doc:`../api/tasks` for
-the full task API.
+See :doc:`../workflows/solvers`, :doc:`../workflows/constrained`, and
+:doc:`../api/tasks` for full API details.

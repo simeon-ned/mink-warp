@@ -4,9 +4,11 @@ Batched differential inverse kinematics on [MuJoCo Warp](https://github.com/goog
 
 ## Status
 
-Device-native pipeline: FK / Jacobians / tasks, normal-equation assembly, batched Cholesky solve, mjwarp position integrate, optional CUDA graph capture.
+Device-native pipeline: FK / Jacobians / tasks, normal-equation assembly, batched Cholesky solve, **constrained ADMM** (box + general inequalities), mjwarp position integrate, optional CUDA graph capture.
 
 **Tasks:** `FrameTask`, `PostureTask`, `DampingTask`, `ComTask`, `JointLimitTask` (alias `ConfigurationLimitTask`).
+
+**Hard limits:** `ConfigurationLimit`, `VelocityLimit`, `LinearInequalityLimit` via `ConstrainedSolver` or `solve_ik(..., limits=…)` (Mink QP equivalent).
 
 **Layout:**
 
@@ -19,6 +21,8 @@ mink_warp/
   lie/               # SE3 / SO3 (host) + wp_ops (device)
   kernels/           # all Warp kernels
   tasks/             # Task / TargetedTask + concrete tasks
+  limits/            # ConfigurationLimit, VelocityLimit, LinearInequalityLimit
+  solvers/           # DLS, LM, L-BFGS, ConstrainedSolver (ADMM)
 ```
 
 ## Install
@@ -38,6 +42,9 @@ posture.set_target_from_configuration(cfg)
 
 solver = mink_warp.IKSolver(cfg)
 solver.solve_and_integrate([frame, posture], dt=0.01, use_graph=True)
+
+# Hard joint limits (Mink limits=None equivalent):
+v = mink_warp.solve_ik(cfg, [frame, posture], dt=0.01, limits=None)
 ```
 
 ## Demos
@@ -66,6 +73,7 @@ Batched throughput and CPU-vs-mink accuracy parity (see `benchmarks/README.md`):
 ```bash
 uv sync --extra dev
 uv run python benchmarks/bench_ik.py            # solves/sec vs batch size
+uv run python benchmarks/bench_constrained.py  # hard limits vs mink daqp
 uv run python benchmarks/bench_parity.py        # agreement with mink (oracle)
 ```
 

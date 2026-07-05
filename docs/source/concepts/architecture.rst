@@ -65,19 +65,20 @@ Solver backends share :class:`~mink_warp.solvers.base.Solver`:
      - Quasi-Newton step
      - Multi-iter ``solve_and_integrate``
    * - ``ConstrainedSolver``
-     - Box-QP / ADMM with hard limits
-     - GPU-only; mink-shaped limits API
+     - Box or general ``G Δq ≤ h`` via ADMM
+     - Mink QP equivalent; box path exactly feasible each iter
 
 Kernels
 -------
 
 Low-level Warp code lives under ``mink_warp/kernels/`` (frame Jacobians,
-residual stacking, tile Cholesky, ADMM box projection). Public code should
-call tasks and solvers, not kernels directly.
+residual stacking, tile Cholesky, box / general-inequality ADMM). Public code
+should call tasks and solvers, not kernels directly.
 
 Related
 -------
 
 - :doc:`mink_parity`
+- :doc:`../workflows/constrained`
 - :doc:`../workflows/solvers`
 - :doc:`../api/index`

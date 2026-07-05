@@ -28,7 +28,8 @@ Key features
 - **Batched by design** — ``nworld`` parallel instances share one model and one
   launch grid (Panda grids, multi-agent IK, parameter sweeps).
 - **Interchangeable solvers** — damped least squares (default), Levenberg–Marquardt,
-  L-BFGS, and box-constrained ADMM for hard joint limits.
+  L-BFGS, and **constrained ADMM** for hard limits (box + general ``G Δq ≤ h``,
+  Mink QP equivalent).
 - **CUDA graph capture** — optional one-step ``solve_and_integrate`` graph for
   fixed task sets in control loops.
 
@@ -75,6 +76,7 @@ Table of Contents
 
    source/tutorial/index
    source/workflows/solvers
+   source/workflows/constrained
    source/workflows/cuda_graphs
    source/benchmarks
 

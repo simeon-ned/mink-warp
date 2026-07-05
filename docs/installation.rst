@@ -2,8 +2,9 @@ Installation
 ============
 
 ``mink-warp`` requires Python 3.10–3.13, MuJoCo, MuJoCo Warp, and Warp.
-A CUDA-capable GPU is required for the full solver stack (tile Cholesky and
-box-ADMM constrained IK are GPU-only).
+
+- **GPU recommended** for batched throughput and CUDA graphs.
+- **CPU supported** for development and tests (including constrained ADMM via Warp LLVM).
 
 From source (development)
 -------------------------

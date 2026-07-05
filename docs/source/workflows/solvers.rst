@@ -4,7 +4,8 @@ Solver backends
 ===============
 
 All backends implement :class:`~mink_warp.solvers.base.Solver` and minimise the
-same weighted least-squares task cost. Pick based on step semantics and limits.
+same weighted least-squares task cost. Pick based on step semantics and whether
+you need **hard limits**.
 
 Quick reference
 ---------------
@@ -27,7 +28,10 @@ Quick reference
      - Multi-iteration reach with quasi-Newton
    * - Constrained
      - ``"constrained"``
-     - Hard joint / velocity limits (box-QP + ADMM, CUDA)
+     - Hard limits via box / general-inequality ADMM (Mink QP equivalent)
+
+Only :class:`~mink_warp.solvers.ConstrainedSolver` has ``supports_limits = True``.
+Cost-only backends (DLS / LM / L-BFGS) ignore ``limits=`` if passed explicitly.
 
 Damped least squares (default)
 ------------------------------
@@ -61,29 +65,35 @@ L-BFGS
 Hard limits (constrained)
 -------------------------
 
+Mink-compatible shortcut — auto-builds :class:`~mink_warp.ConstrainedSolver`:
+
 .. code-block:: python
 
    from mink_warp.limits import ConfigurationLimit, VelocityLimit
 
-   limits = [ConfigurationLimit(model), VelocityLimit(model, 3.0)]
-   solver = mw.ConstrainedSolver(cfg, limits=limits)
-   v = solver.solve(tasks, dt=0.01)
+   v = mw.solve_ik(cfg, tasks, dt=0.01, limits=None)  # default joint limit
+   v = mw.solve_ik(
+       cfg, tasks, dt=0.01,
+       limits=[ConfigurationLimit(model), VelocityLimit(model, 3.0)],
+   )
 
-Or via the functional API:
+Explicit solver (tuning ``admm_iters``, ``use_inequalities``, etc.):
 
 .. code-block:: python
 
-   v = mw.solve_ik(cfg, tasks, dt=0.01, limits=limits)
+   solver = mw.ConstrainedSolver(cfg, limits=[ConfigurationLimit(model)])
+   v = solver.solve(tasks, dt=0.01)
 
-``limits=None`` uses a default :class:`~mink_warp.limits.ConfigurationLimit`;
-``limits=[]`` disables hard limits (unconstrained DLS).
+``limits=[]`` disables hard limits (regularized DLS inside the constrained backend).
+
+Full guide: :doc:`constrained`.
 
 Functional shortcuts
 --------------------
 
 .. code-block:: python
 
-   v = mw.solve_ik(cfg, tasks, dt)                    # one DLS step
+   v = mw.solve_ik(cfg, tasks, dt)                    # unconstrained DLS
    q = mw.solve_ik_iterations(cfg, tasks, dt, iterations=10)
 
 See :doc:`../api/solvers` for the full API.
@@ -91,5 +101,6 @@ See :doc:`../api/solvers` for the full API.
 Related
 -------
 
+- :doc:`constrained` — box vs general inequality ADMM, ``LinearInequalityLimit``
 - :doc:`cuda_graphs` — graph capture with ``DLSSolver``
 - :doc:`../tutorial/tasks_and_limits`

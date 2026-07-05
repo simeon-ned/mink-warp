@@ -26,8 +26,8 @@ Typical use cases:
 - **Porting Mink** — same task names, body-frame Jacobians, ``solve_ik(cfg,
   tasks, dt)``; add batching and move the hot path to device.
 
-It is **not** a full simulator. It does FK, Jacobians, task residuals, linear
-(or box-constrained) solves, and integration — nothing else.
+It is **not** a full simulator. It does FK, Jacobians, task residuals, linear /
+constrained (QP inequality) solves, and integration — nothing else.
 
 What Newton IK is for
 ---------------------

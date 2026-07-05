@@ -14,6 +14,8 @@ Run locally
    uv run python benchmarks/bench_ik.py
    uv run python benchmarks/bench_parity.py
    uv run python benchmarks/bench_solvers.py
+   uv run python benchmarks/bench_constrained.py
+   uv run --with osqp python benchmarks/bench_osqp.py
 
 What they measure
 -----------------
@@ -25,25 +27,31 @@ What they measure
    * - Script
      - Metric
    * - ``bench_ik.py``
-     - Solves/sec vs batch size (Panda, G1)
+     - Solves/sec vs batch size (Panda, G1); ``--solver dls/lm/lbfgs``
    * - ``bench_parity.py``
-     - Agreement with CPU Mink (oracle)
+     - Agreement with CPU Mink (unconstrained DLS oracle)
    * - ``bench_solvers.py``
-     - DLS / LM / L-BFGS / constrained relative cost
+     - DLS / LM / L-BFGS relative cost and tracking error
    * - ``bench_constrained.py``
-     - Box-ADMM constrained solve throughput
+     - Constrained solver throughput, joint-limit violation vs DLS; box vs
+       ``constrained-ineq`` path; accuracy vs mink ``daqp`` + ``ConfigurationLimit``
+   * - ``bench_osqp.py``
+     - Inner box / general ADMM vs reference OSQP on standard QP examples
 
 Recorded numbers are in ``benchmarks/RESULTS.md``.
 
-Interpretation
---------------
+Constrained solver notes
+------------------------
 
-- Tile Cholesky helps most at large ``nv`` (e.g. G1); FK + Jacobian assembly
-  often dominate end-to-end IK time at moderate ``nv``.
-- CUDA graphs reduce launch overhead when the task set is fixed.
+- **Box path** (default for ``ConfigurationLimit`` + ``VelocityLimit``): exact
+  feasibility each ADMM step; tune ``admm_iters`` for optimality, not safety.
+- **General inequality path** (``LinearInequalityLimit``, or
+  ``use_inequalities=True``): needs enough ``admm_iters`` for tight feasibility.
+- Parity vs Mink uses ``limits=None`` / ``ConfigurationLimit`` on Panda (hinge/slide only).
 
 Related
 -------
 
+- :doc:`workflows/constrained`
 - :doc:`workflows/batched_ik`
 - :doc:`workflows/cuda_graphs`
