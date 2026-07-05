@@ -13,8 +13,10 @@ mink-warp uses the same **tasks vs limits** split as Mink:
       the solver minimises combined error.
 
       - :class:`~mink_warp.FrameTask` — frame pose
+      - :class:`~mink_warp.RelativeFrameTask` — pose relative to another frame
       - :class:`~mink_warp.PostureTask` — nominal configuration
       - :class:`~mink_warp.ComTask` — center of mass
+      - :class:`~mink_warp.EqualityConstraintTask` — MuJoCo equality rows (connect, weld, …)
       - :class:`~mink_warp.DampingTask` — velocity regularization
       - :class:`~mink_warp.JointLimitTask` — soft limit penalty
 
@@ -26,6 +28,7 @@ mink-warp uses the same **tasks vs limits** split as Mink:
 
       - :class:`~mink_warp.limits.ConfigurationLimit` — joint bounds
       - :class:`~mink_warp.limits.VelocityLimit` — per-step velocity cap
+      - :class:`~mink_warp.limits.CollisionAvoidanceLimit` — geom-pair normal velocity
       - :class:`~mink_warp.limits.LinearInequalityLimit` — constant half-spaces
 
 Frame task
@@ -60,6 +63,46 @@ Center of mass
 
    com = mw.ComTask(cost=np.array([1.0, 1.0, 0.1]))
    com.set_target_from_configuration(cfg)
+
+Relative frame
+--------------
+
+Regulate a frame pose in another frame's coordinates (e.g. hand relative to torso):
+
+.. code-block:: python
+
+   rel = mw.RelativeFrameTask(
+       "left_palm", "site",
+       "torso_link", "body",
+       position_cost=5.0, orientation_cost=0.5,
+   )
+   rel.set_target_from_configuration(cfg)
+
+Equality constraints
+--------------------
+
+Regulate MuJoCo equality rows (closed chains). Uses host ``mj_forward`` per world:
+
+.. code-block:: python
+
+   eq = mw.EqualityConstraintTask(model, cost=500.0, gain=0.5)
+   tasks = [frame, posture, eq]
+
+Collision avoidance
+-------------------
+
+Configuration-dependent inequalities ``G Δq ≤ h`` (forces the general ADMM path):
+
+.. code-block:: python
+
+   limits = [
+       mw.ConfigurationLimit(model),
+       mw.CollisionAvoidanceLimit(
+           model,
+           geom_pairs=[(["wrist_3_link"], ["floor", "wall"])],
+       ),
+   ]
+   v = mw.solve_ik(cfg, tasks, dt, limits=limits)
 
 Soft vs hard joint limits
 -------------------------

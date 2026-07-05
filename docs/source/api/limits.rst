@@ -16,6 +16,9 @@ Box limits
 .. autoclass:: mink_warp.limits.VelocityLimit
    :members:
 
+.. autoclass:: mink_warp.limits.CollisionAvoidanceLimit
+   :members:
+
 General inequalities
 --------------------
 

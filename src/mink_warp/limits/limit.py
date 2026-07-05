@@ -35,6 +35,8 @@ class Limit(abc.ABC):
     n_inequalities: int = 0
     #: Whether :meth:`apply_box` is implemented (False for inequality-only limits).
     box_capable: bool = True
+    #: False when inequality assembly reads device state on the host each step.
+    supports_cuda_graph: bool = True
 
     def apply_box(
         self,

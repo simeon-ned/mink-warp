@@ -56,6 +56,7 @@ class Configuration:
             self._point_wp = wp.zeros(nworld, dtype=wp.vec3)
             self._body_wp = wp.zeros(nworld, dtype=wp.int32)
             self._pose_wp = wp.zeros((nworld, 7), dtype=float)
+            self._pose_b_wp = wp.zeros((nworld, 7), dtype=float)
             self._q_broadcast_wp = wp.zeros(model.nq, dtype=float)
             self._q_out_wp = wp.zeros((nworld, model.nq), dtype=float)
             self._v_wp = wp.zeros((nworld, model.nv), dtype=float)
@@ -137,6 +138,34 @@ class Configuration:
         """Host ``SE3`` for world 0 (optional convenience)."""
         pose = self.get_transform_frame_to_world(frame_name, frame_type).numpy()
         return SE3(wxyz_xyz=pose[0].astype(np.float64))
+
+    def get_transform(
+        self,
+        frame_name: str,
+        frame_type: str,
+        root_name: str,
+        root_type: str,
+    ) -> wp.array:
+        """Relative pose ``root^{-1} @ frame`` on device, shape ``(nworld, 7)``."""
+        from .kernels.frame import copy_poses, relative_pose_wxyz_xyz
+
+        frame_world = self.get_transform_frame_to_world(frame_name, frame_type)
+        with wp.ScopedDevice(self.device):
+            wp.launch(
+                copy_poses,
+                dim=self.nworld,
+                inputs=[frame_world],
+                outputs=[self._pose_b_wp],
+            )
+        root_world = self.get_transform_frame_to_world(root_name, root_type)
+        with wp.ScopedDevice(self.device):
+            wp.launch(
+                relative_pose_wxyz_xyz,
+                dim=self.nworld,
+                inputs=[root_world, self._pose_b_wp],
+                outputs=[self._pose_wp],
+            )
+        return self._pose_wp
 
     def set_integration_dt(self, dt: float) -> None:
         """Write the integrate timestep to device (call outside CUDA graphs)."""

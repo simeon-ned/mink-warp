@@ -18,6 +18,9 @@ class Task(abc.ABC):
     """Kinematic task with device-native error and Jacobian."""
 
     k: int = 0
+    #: False when :meth:`_eval` reads device state on the host (e.g. ``q.numpy()``);
+    #: such tasks cannot participate in CUDA graph capture.
+    supports_cuda_graph: bool = True
 
     def __init__(
         self,

@@ -55,6 +55,8 @@ Built-in limits
      - ``gain*(lower - q) ≤ Δq ≤ gain*(upper - q)`` per hinge/slide joint (Mink parity)
    * - :class:`~mink_warp.limits.VelocityLimit`
      - ``|Δq_i| ≤ dt * v_max`` on bounded dofs
+   * - :class:`~mink_warp.limits.CollisionAvoidanceLimit`
+     - Normal-velocity rows from ``mj_geomDistance`` (host query per world)
    * - :class:`~mink_warp.limits.LinearInequalityLimit`
      - Constant ``G Δq ≤ h`` (half-spaces, coupled bounds); **inequality-only**
 

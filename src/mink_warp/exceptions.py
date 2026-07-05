@@ -77,3 +77,7 @@ class InvalidGain(MinkWarpError):
 
 class InvalidDamping(MinkWarpError):
     """Exception raised when the damping is outside the valid range."""
+
+
+class InvalidConstraint(MinkWarpError):
+    """Exception raised when a model constraint is invalid or inactive."""

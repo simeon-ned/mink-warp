@@ -19,8 +19,10 @@ What matches
      - mink-warp
    * - ``Configuration``
      - ``Configuration(model, nworld=…)`` — batched; ``q`` is ``wp.array``
-   * - ``FrameTask``, ``PostureTask``, ``ComTask``, ``DampingTask``
+   * - ``FrameTask``, ``RelativeFrameTask``, ``PostureTask``, ``ComTask``, ``DampingTask``, ``EqualityConstraintTask``
      - Same names; body-frame Jacobian convention
+   * - ``CollisionAvoidanceLimit``
+     - :class:`~mink_warp.limits.CollisionAvoidanceLimit` (host distance query per world)
    * - ``ConfigurationLimit`` / joint-limit task
      - ``JointLimitTask`` / ``ConfigurationLimitTask`` (soft) + ``ConfigurationLimit`` (hard)
    * - ``VelocityLimit``

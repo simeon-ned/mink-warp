@@ -85,7 +85,8 @@ class DLSSolver(Solver):
             raise ValueError(f"iterations must be >= 1, got {iterations}")
         damping = self._damping(damping)
         if (use_graph and iterations == 1
-                and wp.get_device(self.configuration.device).is_cuda):
+                and wp.get_device(self.configuration.device).is_cuda
+                and all(getattr(t, "supports_cuda_graph", True) for t in tasks)):
             self._ensure_graph(tasks, dt, damping)
             if self._graph is not None:
                 wp.capture_launch(self._graph)
