@@ -39,6 +39,11 @@ class Solver(abc.ABC):
     #: Registry key / human label.
     name: str = "solver"
 
+    #: Whether this backend enforces hard limits. Only :class:`ConstrainedSolver`
+    #: sets this True; the cost-only backends (DLS / LM / L-BFGS) cannot honour a
+    #: ``limits=`` argument and callers must not silently assume they do.
+    supports_limits: bool = False
+
     def __init__(self, configuration: Configuration):
         self.configuration = configuration
 

@@ -59,3 +59,67 @@ def box_qp_admm(
         z = np.clip(x_hat + u, lo, hi)
         u = u + x_hat - z
     return z
+
+
+def ineq_qp_admm(
+    H: np.ndarray,
+    c: np.ndarray,
+    G: np.ndarray,
+    h: np.ndarray,
+    *,
+    rho: float,
+    sigma: float,
+    iters: int,
+    alpha: float = 1.6,
+) -> np.ndarray:
+    """Host NumPy reference for the general dense-inequality QP the GPU solver runs.
+
+        min_x  1/2 x^T H x + c^T x   s.t.   G x <= h
+
+    This is the reduced (Schur-normal) OSQP-ADMM the device kernel
+    (``get_admm_ineq_kernel``) implements. The raw KKT system is quasidefinite,
+    so ``z = G x`` is eliminated to the SPD normal matrix
+
+        M = H + sigma I + rho G^T G          (factored once)
+
+    and each iteration is a cached solve + a projection of the constraint image
+    onto ``(-inf, h]`` + a dual update::
+
+        x_tilde = M^{-1}(sigma x - c + G^T (rho z - y))
+        z_tilde = G x_tilde
+        x       = alpha x_tilde + (1-alpha) x
+        z_hat   = alpha z_tilde + (1-alpha) z
+        z       = min(z_hat + y/rho, h)               (project onto (-inf, h])
+        y       = y + rho (z_hat - z)
+
+    Unlike the box solver (which returns the projected ``z`` and is feasible at
+    every iteration), the returned ``x`` reaches feasibility *asymptotically*:
+    ``G x <= h`` holds to a tolerance that shrinks with ``iters``. ``sigma > 0``
+    keeps ``M`` positive-definite even where ``H`` and ``G^T G`` leave a dof
+    unpenalized. Returns ``x``.
+    """
+    H = np.asarray(H, dtype=np.float64)
+    c = np.asarray(c, dtype=np.float64)
+    G = np.asarray(G, dtype=np.float64)
+    h = np.asarray(h, dtype=np.float64)
+    n = H.shape[0]
+    m = G.shape[0]
+
+    M = H + sigma * np.eye(n) + rho * (G.T @ G)
+    L = np.linalg.cholesky(M)
+
+    def _solve(rhs: np.ndarray) -> np.ndarray:
+        return np.linalg.solve(L.T, np.linalg.solve(L, rhs))
+
+    x = _solve(-c)  # warm start from the regularized unconstrained step
+    z = np.minimum(G @ x, h)
+    y = np.zeros(m)
+    for _ in range(iters):
+        x_tilde = _solve(sigma * x - c + G.T @ (rho * z - y))
+        z_tilde = G @ x_tilde
+        x = alpha * x_tilde + (1.0 - alpha) * x
+        z_hat = alpha * z_tilde + (1.0 - alpha) * z
+        z_new = np.minimum(z_hat + y / rho, h)
+        y = y + rho * (z_hat - z_new)
+        z = z_new
+    return x

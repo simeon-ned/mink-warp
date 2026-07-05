@@ -224,5 +224,54 @@ uv run python benchmarks/bench_constrained.py panda --solvers dls constrained --
 uv run python benchmarks/bench_constrained.py g1    --solvers dls constrained --nworld 4096 --amp-scale 3 --graph --device cuda:0
 ```
 
+## Constrained solver — general inequalities (`G Δq ≤ h`)
+
+The `constrained` backend also handles **arbitrary linear inequalities** a box
+cannot express (an oriented half-space, coupled-joint bounds, collision rows),
+via a factor-once reduced OSQP-ADMM: eliminate the constraint image `z = G Δq`
+to the SPD normal matrix `M = H + σI + ρ GᵀG`, factor it once with the tile
+Cholesky, then `admm_iters` of {cached solve → project `z` onto `(-∞, h]` → dual
+update}. It returns `Δq`, whose feasibility tightens with `admm_iters`
+(**asymptotic**), where the box path is exact at every step.
+
+The path is auto-selected. Box-only limits keep the fast exact box kernel; an
+inequality-only limit (`LinearInequalityLimit`) — or any box limit with
+`use_inequalities=True` — switches to the general kernel, where box limits emit
+their `[P; −P]` rows too. So the common case pays nothing, and the general path
+is opt-in.
+
+**Parity** (`tests/test_inequality_constraints.py`): the configuration limit
+re-expressed as `G=[P; −P]` inequalities matches both the box path and mink's
+`daqp` QP to ≈3e-6; an arbitrary half-space matches mink's `quadprog` (active /
+inactive / two-row / padded-inert / batched-mixed); a trajectory that never
+binds tracks identically to the unconstrained `dls`.
+
+**Throughput vs `dls`** (RTX 4070 Ti SUPER, CUDA graph, `--amp-scale 3`,
+`admm_iters=30`). `constrained` is the exact box path; `constrained-ineq` is the
+same configuration limit driven through the general `G Δq ≤ h` kernel:
+
+| scene | worlds | dls solves/s | box solves/s (viol) | general-ineq solves/s (viol) | box / ineq overhead |
+|---|--:|--:|--:|--:|--:|
+| panda (nv=9)  | 256  |    959,684 |   910,551 (**0**) |   824,590 (**0**)       | 1.05× / 1.16× |
+| panda (nv=9)  | 1024 |  3,681,986 | 3,182,800 (**0**) | 2,761,159 (**0**)       | 1.16× / 1.33× |
+| panda (nv=9)  | 4096 | 11,787,208 | 8,910,193 (**0**) | 6,337,345 (**0**)       | 1.32× / 1.86× |
+| g1 (nv=49)    | 256  |     24,608 |    24,517 (**0**) |    22,989 (8.6e-5)      | 1.00× / 1.07× |
+| g1 (nv=49)    | 1024 |     96,682 |    95,346 (**0**) |    80,452 (8.6e-5)      | 1.01× / 1.20× |
+| g1 (nv=49)    | 4096 |    372,401 |   355,117 (**0**) |   218,947 (8.6e-5)      | 1.02× / 1.05× |
+
+The general kernel costs more than the box kernel — dense `GᵀG` plus two tile
+matmuls per iteration — so its overhead grows with the batch and the number of
+rows (1.07–1.86× `dls`, vs the box path's 1.00–1.32×). Its feasibility is
+asymptotic: on `panda` the ±unit configuration rows converge exactly by
+`admm_iters=30` (violation **0**); on `g1` (more, coupled limited dofs) a
+negligible ~9e-5 rad residual remains at 30 — raise `admm_iters` to shrink it, or
+use the exact box path when the constraint is a per-dof interval.
+
+```bash
+# general inequality path (same config limit as [P;-P] rows) vs box vs dls
+uv run python benchmarks/bench_constrained.py panda --solvers dls constrained constrained-ineq --nworld 4096 --amp-scale 3 --graph --device cuda:0
+uv run python benchmarks/bench_constrained.py g1    --solvers dls constrained constrained-ineq --nworld 4096 --amp-scale 3 --graph --device cuda:0
+```
+
 _Numbers will shift with GPU model, batch, task stack, and warp/mujoco-warp versions. Re-run on
 your target hardware._

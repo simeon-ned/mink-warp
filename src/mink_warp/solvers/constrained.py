@@ -5,16 +5,26 @@ Solves, per world, the same QP as mink::
     min_dq  1/2 dq^T H dq + c^T dq   s.t.   lo <= dq <= hi
 
 where ``H, c`` are assembled from the task stack exactly as :class:`DLSSolver`
-does, and ``[lo, hi]`` is the intersection of the supplied hard limits
-(:class:`~mink_warp.limits.ConfigurationLimit` /
-:class:`~mink_warp.limits.VelocityLimit`). The box is solved by OSQP-style
-box-ADMM (factor ``M = H + rho I`` once with tile Cholesky, then a fixed number
-of cached-solve + box-clip + dual-update iterations), returning the projected
-step ``dq`` which lies inside ``[lo, hi]`` at *every* iteration — so joint /
-velocity limits are never violated, even when the target drives the arm hard
-into a bound and even if the inner loop is truncated.
+does. Two solve paths, auto-selected from the supplied limits:
 
-Tile Cholesky is cuSolverDx / GPU-only, so the ADMM solve runs on CUDA only.
+* **box** (default, fast) — when every limit is a per-dof interval
+  (:class:`~mink_warp.limits.ConfigurationLimit` /
+  :class:`~mink_warp.limits.VelocityLimit`), their ``[lo, hi]`` is intersected
+  and solved by OSQP-style box-ADMM (factor ``M = H + rho I`` once, then fixed
+  cached-solve + box-clip + dual-update iterations). The returned step lies
+  inside ``[lo, hi]`` at *every* iteration, so joint / velocity limits are never
+  violated even when the target drives the arm hard into a bound or the loop is
+  truncated.
+
+* **general inequality** — when any limit contributes dense rows a box cannot
+  express (:class:`~mink_warp.limits.LinearInequalityLimit`, or any box limit
+  when ``use_inequalities=True``), the stacked ``G dq <= h`` is solved by the
+  reduced Schur-normal OSQP-ADMM (factor ``M = H + sigma I + rho G^T G`` once,
+  project the constraint image onto ``(-inf, h]`` each step). Feasibility is
+  reached asymptotically (tightening with ``admm_iters``) rather than exactly.
+
+Both paths run one block per world with tile Cholesky (which also runs on CPU
+under Warp's LLVM backend, so the whole solver is testable without a GPU).
 """
 
 from __future__ import annotations
@@ -27,8 +37,11 @@ from ..configuration import Configuration
 from ..kernels.constrained import (
     compute_rho,
     get_admm_box_kernel,
+    get_admm_ineq_kernel,
     init_box,
+    init_ineq,
     launch_admm_box_solve,
+    launch_admm_ineq_solve,
 )
 from ..kernels.solver import (
     accumulate_normal_equations,
@@ -50,8 +63,9 @@ class ConstrainedSolver(Solver):
         limits: Hard limits to enforce. ``None`` defaults to a single
             :class:`ConfigurationLimit` (mink's ``limits=None`` behaviour); pass
             ``[]`` to disable limits (then this reduces to a regularized DLS solve).
-        admm_iters: Inner ADMM iterations per solve (feasibility holds at any
-            count; more tightens agreement with the true QP optimum).
+        admm_iters: Inner ADMM iterations per solve (box feasibility holds at any
+            count; more tightens agreement with the true QP optimum, and is what
+            the general-inequality path relies on for feasibility).
         rho_scale, rho_min, rho_max: Control the per-world ADMM penalty
             ``rho = clamp(rho_scale*sqrt(min*max diag H), rho_min, rho_max)``.
             ``rho_min`` must be > 0: it is the hard SPD safeguard that keeps
@@ -60,9 +74,17 @@ class ConstrainedSolver(Solver):
         alpha: ADMM over-relaxation in [1, 2) (1.6 accelerates convergence).
         damping: Levenberg-Marquardt damping added to ``H``'s diagonal (matches
             mink's ``damping``, applied on top of per-task ``mu``).
+        sigma: SPD floor added to ``M``'s diagonal in the general-inequality path
+            (``M = H + sigma I + rho G^T G``); must be > 0. Unused by the box path.
+        use_inequalities: Force the general ``G dq <= h`` path even for box-only
+            limits (they emit their ``[P;-P]`` rows). Auto-enabled whenever a
+            limit is inequality-only (e.g. :class:`LinearInequalityLimit`). The
+            box path is faster and exactly feasible, so leave this False unless
+            you specifically want the dense solve.
     """
 
     name = "constrained"
+    supports_limits = True
 
     def __init__(
         self,
@@ -75,6 +97,8 @@ class ConstrainedSolver(Solver):
         rho_max: float = 1e6,
         alpha: float = 1.6,
         damping: float = 1e-12,
+        sigma: float = 1e-6,
+        use_inequalities: bool = False,
     ):
         super().__init__(configuration)
         if admm_iters < 1:
@@ -83,6 +107,11 @@ class ConstrainedSolver(Solver):
             raise ValueError(
                 f"rho_min must be > 0 (SPD safeguard for the H+rho*I Cholesky "
                 f"factor), got {rho_min}"
+            )
+        if sigma <= 0.0:
+            raise ValueError(
+                f"sigma must be > 0 (SPD safeguard for the H+sigma*I+rho*G^T G "
+                f"factor in the general-inequality path), got {sigma}"
             )
         if limits is None:
             limits = [ConfigurationLimit(configuration.model)]
@@ -93,6 +122,22 @@ class ConstrainedSolver(Solver):
         self.rho_min = float(rho_min)
         self.rho_max = float(rho_max)
         self.alpha = float(alpha)
+        self.sigma = float(sigma)
+
+        # Choose the solve path. Any inequality-only limit forces the general
+        # path; box-only limits use it only when explicitly requested. A path
+        # needs at least one dense row, else it degenerates to the box path.
+        self.n_ineq = sum(int(getattr(lim, "n_inequalities", 0)) for lim in self.limits)
+        all_box = all(getattr(lim, "box_capable", True) for lim in self.limits)
+        # An inequality-only limit that yields no rows can't fall back to the box
+        # path (it has no box form) — fail loud rather than crash later in
+        # apply_box with a misleading message.
+        if not all_box and self.n_ineq == 0:
+            raise ValueError(
+                "an inequality-only limit (box_capable=False) contributes 0 "
+                "rows; it has no box form to fall back on."
+            )
+        self._use_ineq = (use_inequalities or not all_box) and self.n_ineq > 0
 
         nworld = configuration.nworld
         nv = configuration.nv
@@ -101,12 +146,19 @@ class ConstrainedSolver(Solver):
             self.c = wp.zeros((nworld, nv), dtype=float)
             self.mu_total = wp.zeros(nworld, dtype=float)
             self.rhs = wp.zeros((nworld, nv), dtype=float)  # b = -c = W^T e
-            self.lo = wp.zeros((nworld, nv), dtype=float)
-            self.hi = wp.zeros((nworld, nv), dtype=float)
             self.rho = wp.zeros(nworld, dtype=float)
             self.dq = wp.zeros((nworld, nv), dtype=float)
             self.v = wp.zeros((nworld, nv), dtype=float)
-        self._admm = get_admm_box_kernel(nv, self.admm_iters)
+            if self._use_ineq:
+                self.G = wp.zeros((nworld, self.n_ineq, nv), dtype=float)
+                self.h = wp.zeros((nworld, self.n_ineq), dtype=float)
+            else:
+                self.lo = wp.zeros((nworld, nv), dtype=float)
+                self.hi = wp.zeros((nworld, nv), dtype=float)
+        if self._use_ineq:
+            self._admm = get_admm_ineq_kernel(nv, self.n_ineq, self.admm_iters)
+        else:
+            self._admm = get_admm_box_kernel(nv, self.admm_iters)
         self._graph = None
         self._graph_key: tuple | None = None
 
@@ -228,10 +280,21 @@ class ConstrainedSolver(Solver):
                 inputs=[self.c, nv],
                 outputs=[self.rhs],
             )
-            # --- Box [lo, hi] from the hard limits. ---
-            wp.launch(init_box, dim=(nworld, nv), outputs=[self.lo, self.hi])
-            for limit in self.limits:
-                limit.apply_box(cfg, dt, self.lo, self.hi)
+            # --- Constraint block from the hard limits. ---
+            if self._use_ineq:
+                # Dense G dq <= h: reset to inert rows, then each limit scatters.
+                wp.launch(init_ineq, dim=(nworld, self.n_ineq), outputs=[self.G, self.h])
+                offset = 0
+                for limit in self.limits:
+                    rows = int(getattr(limit, "n_inequalities", 0))
+                    if rows > 0:
+                        limit.scatter_inequalities(cfg, dt, offset, self.G, self.h)
+                        offset += rows
+            else:
+                # Box [lo, hi]: reset to (-inf, +inf), then each limit tightens.
+                wp.launch(init_box, dim=(nworld, nv), outputs=[self.lo, self.hi])
+                for limit in self.limits:
+                    limit.apply_box(cfg, dt, self.lo, self.hi)
             # --- Per-world ADMM penalty. ---
             wp.launch(
                 compute_rho,
@@ -257,18 +320,32 @@ class ConstrainedSolver(Solver):
         nworld = cfg.nworld
         self._assemble(tasks, dt, damping)
         with wp.ScopedDevice(cfg.device):
-            # --- Box-ADMM solve -> feasible dq (GPU-only tile Cholesky). ---
-            launch_admm_box_solve(
-                self._admm,
-                nworld=nworld,
-                H=self.H,
-                b=self.rhs,
-                lo=self.lo,
-                hi=self.hi,
-                rho=self.rho,
-                alpha=self.alpha,
-                dq=self.dq,
-            )
+            # --- ADMM solve -> dq (tile Cholesky). ---
+            if self._use_ineq:
+                launch_admm_ineq_solve(
+                    self._admm,
+                    nworld=nworld,
+                    H=self.H,
+                    b=self.rhs,
+                    G=self.G,
+                    h=self.h,
+                    rho=self.rho,
+                    sigma=self.sigma,
+                    alpha=self.alpha,
+                    dq=self.dq,
+                )
+            else:
+                launch_admm_box_solve(
+                    self._admm,
+                    nworld=nworld,
+                    H=self.H,
+                    b=self.rhs,
+                    lo=self.lo,
+                    hi=self.hi,
+                    rho=self.rho,
+                    alpha=self.alpha,
+                    dq=self.dq,
+                )
             wp.launch(
                 scale_velocity,
                 dim=nworld,

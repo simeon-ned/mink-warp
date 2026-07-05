@@ -66,13 +66,17 @@ def _max_violation(q_np, qa, lo, hi):
 def _build_solver(kind, cfg, model, *, admm_iters, rho_scale, damping):
     if kind == "dls":
         return mw.DLSSolver(cfg, damping=damping)
-    if kind == "constrained":
+    if kind in ("constrained", "constrained-ineq"):
+        # "constrained"      -> fast box path (exact at every step)
+        # "constrained-ineq" -> general dense G dq <= h path (same config limit
+        #                       re-expressed as [P;-P] rows), to measure overhead.
         return mw.ConstrainedSolver(
             cfg,
             limits=[mw.ConfigurationLimit(model)],
             admm_iters=admm_iters,
             rho_scale=rho_scale,
             damping=damping,
+            use_inequalities=(kind == "constrained-ineq"),
         )
     raise ValueError(f"unknown backend {kind!r}")
 
@@ -91,7 +95,7 @@ def run(scene_key, kind, *, nworld, steps, warmup, admm_iters, rho_scale,
                            rho_scale=rho_scale, damping=damping)
     qa, lo, hi = _limited_dofs(model)
 
-    graph_ok = use_graph and kind in ("dls", "constrained")
+    graph_ok = use_graph and kind in ("dls", "constrained", "constrained-ineq")
     times_us, max_viol = [], 0.0
     for i in range(warmup + steps):
         scene.update_mw(s, i * DT)
