@@ -310,6 +310,28 @@ def linear_ineq_scatter(
         G[worldid, r, j] = Gc[i, j]
 
 
+@wp.kernel
+def scatter_ineq_block(
+    g_src: wp.array3d[float],  # (nworld, m_rows, nv) per-world rows
+    h_src: wp.array2d[float],  # (nworld, m_rows)
+    row_offset: int,
+    G: wp.array3d[float],
+    h: wp.array2d[float],
+):
+    """Copy a per-world dense block into ``G``/``h`` at ``row_offset``.
+
+    Lets a host-built collision block be uploaded once (into ``g_src``/``h_src``)
+    and placed on device without downloading and re-uploading the whole padded
+    ``G`` buffer every step.
+    """
+    worldid, i = wp.tid()
+    nv = G.shape[2]
+    r = row_offset + i
+    h[worldid, r] = h_src[worldid, i]
+    for j in range(nv):
+        G[worldid, r, j] = g_src[worldid, i, j]
+
+
 # Cache of (nv, m, iters)-specialised inequality-ADMM kernels.
 _ADMM_INEQ_CACHE: dict[tuple[int, int, int], Any] = {}
 

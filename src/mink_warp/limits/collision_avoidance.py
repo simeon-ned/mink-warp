@@ -10,6 +10,8 @@ import numpy as np
 import warp as wp
 
 from ..configuration import Configuration
+from ..kernels.collision import collision_world_broadphase
+from ..kernels.constrained import scatter_ineq_block
 from .limit import Limit
 
 Geom = int | str
@@ -92,11 +94,18 @@ class CollisionAvoidanceLimit(Limit):
         self.max_num_contacts = len(self.geom_id_pairs)
         self.n_inequalities = self.max_num_contacts
         self._host_data = mujoco.MjData(model)
-        self._fromto = np.empty(6)
-        self._normal = np.empty(3)
-        self._jac1 = np.empty((3, model.nv))
-        self._jac2 = np.empty((3, model.nv))
+        # Persistent device staging buffers for the host-built collision block +
+        # broadphase prefilter, allocated on first scatter (keyed by device +
+        # nworld).
+        self._g_dev: wp.array | None = None
+        self._h_dev: wp.array | None = None
+        self._world_any: wp.array | None = None
+        self._pair_g1_dev: wp.array | None = None
+        self._pair_g2_dev: wp.array | None = None
+        self._pair_rsum_dev: wp.array | None = None
+        self._dev_key: tuple[str, int] | None = None
         self._init_broadphase(model)
+        self._init_device_broadphase(model)
 
     def scatter_inequalities(
         self,
@@ -111,40 +120,42 @@ class CollisionAvoidanceLimit(Limit):
         model = self.model
         nworld = configuration.nworld
         nv = configuration.nv
+        m = self.max_num_contacts
+        device = configuration.device
+        self._ensure_dev_stage(device, nworld)
+
         q_np = configuration.q.numpy()
-        g_np = np.zeros((nworld, self.max_num_contacts, nv), dtype=np.float32)
-        h_np = np.full(
-            (nworld, self.max_num_contacts), np.inf, dtype=np.float32
-        )
-        data = self._host_data
+        g_np = np.zeros((nworld, m, nv), dtype=np.float32)
+        h_np = np.full((nworld, m), np.inf, dtype=np.float32)
         distmax = self.collision_detection_distance
         min_dist = self.minimum_distance_from_collisions
         gain = self.gain
         relaxation = self.bound_relaxation
+        use_broadphase = self.broadphase and m >= self.broadphase_min_pairs
 
-        for w in range(nworld):
+        # Device broadphase: in parallel over (world, pair), flag worlds with any
+        # pair near enough to matter. Worlds flagged 0 provably have no active
+        # row, so their host narrowphase is skipped. When the device test is
+        # unavailable/disabled every world is processed (identical result).
+        worlds = self._prefilter_worlds(configuration) if use_broadphase else None
+        data = self._host_data
+        fromto = np.empty(6)
+        normal = np.empty(3)
+        jac1 = np.empty((3, nv))
+        jac2 = np.empty((3, nv))
+        for w in worlds if worlds is not None else range(nworld):
             data.qpos[:] = q_np[w]
             mujoco.mj_fwdPosition(model, data)
-            if self.broadphase and self.max_num_contacts >= self.broadphase_min_pairs:
-                indices = self._broadphase_survivors(data)
-            else:
-                indices = range(self.max_num_contacts)
+            indices = self._broadphase_survivors(data) if use_broadphase else range(m)
             for idx in indices:
                 geom1_id, geom2_id = self.geom_id_pairs[idx]
                 dist = mujoco.mj_geomDistance(
-                    model, data, geom1_id, geom2_id, distmax, self._fromto
+                    model, data, geom1_id, geom2_id, distmax, fromto
                 )
                 if abs(dist - distmax) < 1e-12:
                     continue
                 row = _compute_contact_normal_jacobian(
-                    model,
-                    data,
-                    geom1_id,
-                    geom2_id,
-                    self._fromto,
-                    self._normal,
-                    self._jac1,
-                    self._jac2,
+                    model, data, geom1_id, geom2_id, fromto, normal, jac1, jac2
                 )
                 if dist > min_dist:
                     h_np[w, idx] = (gain * (dist - min_dist) / dt) + relaxation
@@ -153,13 +164,76 @@ class CollisionAvoidanceLimit(Limit):
                 sign = -1.0 if dist >= 0 else 1.0
                 g_np[w, idx] = sign * row.astype(np.float32)
 
+        # Upload only the collision block and scatter it into G/h at row_offset,
+        # instead of downloading + re-uploading the whole padded QP buffer.
+        with wp.ScopedDevice(device):
+            self._g_dev.assign(g_np)
+            self._h_dev.assign(h_np)
+            wp.launch(
+                scatter_ineq_block,
+                dim=(nworld, m),
+                inputs=[self._g_dev, self._h_dev, int(row_offset)],
+                outputs=[G, h],
+            )
+
+    def _prefilter_worlds(self, configuration: Configuration) -> np.ndarray:
+        """World indices with any monitored pair within the detection band.
+
+        Runs :func:`collision_world_broadphase` on the batched ``geom_xpos`` and
+        returns the surviving world indices (host narrowphase runs only on these).
+        """
+        nworld = configuration.nworld
         with wp.ScopedDevice(configuration.device):
-            g_full = G.numpy()
-            h_full = h.numpy()
-            g_full[:, row_offset : row_offset + self.max_num_contacts, :] = g_np
-            h_full[:, row_offset : row_offset + self.max_num_contacts] = h_np
-            G.assign(g_full)
-            h.assign(h_full)
+            self._world_any.zero_()
+            wp.launch(
+                collision_world_broadphase,
+                dim=(nworld, self.max_num_contacts),
+                inputs=[
+                    configuration.wp_data.geom_xpos,
+                    self._pair_g1_dev,
+                    self._pair_g2_dev,
+                    self._pair_rsum_dev,
+                    float(self._bp_margin),
+                ],
+                outputs=[self._world_any],
+            )
+        return np.nonzero(self._world_any.numpy())[0]
+
+    def _init_device_broadphase(self, model: mujoco.MjModel) -> None:
+        """Precompute per-pair geom ids + bounding-sphere sums for the device test."""
+        pairs = np.array(self.geom_id_pairs, dtype=np.int32).reshape(-1, 2)
+        if pairs.size == 0:
+            self._pair_g1_np = np.zeros(0, dtype=np.int32)
+            self._pair_g2_np = np.zeros(0, dtype=np.int32)
+            self._pair_rsum_np = np.zeros(0, dtype=np.float32)
+            self._bp_margin = self.collision_detection_distance
+            return
+        g1, g2 = pairs[:, 0], pairs[:, 1]
+        rbound = model.geom_rbound
+        both_bounded = (rbound[g1] > 0.0) & (rbound[g2] > 0.0)
+        # rsum < 0 marks plane / unbounded pairs -> always handed to host.
+        rsum = np.where(both_bounded, rbound[g1] + rbound[g2], -1.0)
+        self._pair_g1_np = g1.copy()
+        self._pair_g2_np = g2.copy()
+        self._pair_rsum_np = rsum.astype(np.float32)
+        # Slack keeps the float32 device test a conservative superset of the
+        # exact float64 host sphere test (host margin == detection distance).
+        self._bp_margin = self.collision_detection_distance + 0.01
+
+    def _ensure_dev_stage(self, device: str, nworld: int) -> None:
+        key = (device, nworld)
+        if self._dev_key == key:
+            return
+        with wp.ScopedDevice(device):
+            self._g_dev = wp.zeros(
+                (nworld, self.max_num_contacts, self.model.nv), dtype=float
+            )
+            self._h_dev = wp.zeros((nworld, self.max_num_contacts), dtype=float)
+            self._world_any = wp.zeros(nworld, dtype=wp.int32)
+            self._pair_g1_dev = wp.array(self._pair_g1_np, dtype=wp.int32)
+            self._pair_g2_dev = wp.array(self._pair_g2_np, dtype=wp.int32)
+            self._pair_rsum_dev = wp.array(self._pair_rsum_np, dtype=float)
+        self._dev_key = key
 
     def _homogenize_geom_id_list(self, geom_list: GeomSequence) -> list[int]:
         out: list[int] = []
