@@ -275,3 +275,65 @@ uv run python benchmarks/bench_constrained.py g1    --solvers dls constrained co
 
 _Numbers will shift with GPU model, batch, task stack, and warp/mujoco-warp versions. Re-run on
 your target hardware._
+
+---
+
+## Closed-kinematics + collision-avoidance tasks (host-assembly hot path)
+
+`EqualityConstraintTask` (Cassie closed four-bar chains) and
+`CollisionAvoidanceLimit` (dual iiwa self-collision) build their rows from host
+MuJoCo (`mj_fwdPosition`, `mj_geomDistance`, `mj_jac`) — one world at a time.
+On GPU the QP solve is offloaded, so this host assembly, not the solve,
+dominates the step (its share `hot %` climbs toward 100% as the batch grows).
+`bench_tasks.py` measures throughput, the host-assembly share, the device
+broadphase skip-rate (`bp-skip`), and mink parity.
+
+**Accuracy is unchanged by every optimization here** (bit-identical rows), so the
+mink parity floor is exactly the feature branch's: equality `|Δe| 3.7e-9`,
+`|ΔJ| 2.3e-8`; collision `|ΔG| 1.0e-7`, `|Δh| 1.5e-6`.
+
+Optimizations (all parity-preserving):
+- **Equality:** `mj_forward → mj_fwdPosition` (equality `efc_pos`/`efc_J` are
+  position-only) + drop a redundant `efc_J` copy.
+- **Collision:** a **device broadphase** kernel runs the geom-pair proximity
+  tests in parallel over every `(world, pair)` off the batched `geom_xpos`;
+  worlds with no nearby pair skip the host narrowphase entirely. Plus a
+  **slice scatter** that uploads only the collision block into `G/h` at its row
+  offset instead of round-tripping the whole padded QP buffer each step.
+
+Throughput on an RTX 4070 Ti SUPER (eager, `--collision-motion dense`):
+
+| scene | worlds | baseline solves/s | optimized solves/s | speedup | host share (base → opt) |
+|---|--:|--:|--:|--:|--:|
+| cassie (nv=32, equality)   | 256  |  9,448 | 11,208 | 1.19× | 44% → 34% |
+| cassie (nv=32, equality)   | 1024 | 16,110 | 22,891 | 1.42× | 74% → 64% |
+| cassie (nv=32, equality)   | 4096 | 20,297 | 31,193 | **1.54×** | 92% → 87% |
+| dual iiwa (nv=14, collision) | 256  | 18,925 | 31,223 | 1.65× | 89% → 83% |
+| dual iiwa (nv=14, collision) | 1024 | 20,543 | 35,493 | 1.73× | 95% → 92% |
+| dual iiwa (nv=14, collision) | 4096 | 20,214 | 37,101 | **1.84×** | 95% → 95% |
+
+The speedup grows with the batch: the bigger the batch, the more the host
+assembly dominates, so shrinking it moves the whole step. Baseline = the feature
+branch's own `mj_forward` + full-buffer-round-trip code.
+
+**Device broadphase, data-dependent.** The `dense` trajectory sweeps the arms
+through each other, so ~⅓ of the (phase-offset) worlds are near every step
+(`bp-skip ≈ 67%`). When collisions are sparse (`--collision-motion sparse`, arms
+kept on their own sides) the prefilter drops **every** world it can
+(`bp-skip = 100%`) and the host narrowphase all but vanishes:
+
+| worlds | dense host `hot µs` | sparse host `hot µs` | sparse solves/s |
+|---|--:|--:|--:|
+| 256  |  6,791 |   379 | 152,010 |
+| 1024 | 26,524 | 1,196 | 323,665 |
+| 4096 | 105,261 | 3,857 | 509,283 |
+
+At 4096 worlds the parallel pair checks cut host assembly ~27× (105 ms → 3.9 ms)
+when few worlds actually collide — the batched-GPU broadphase paying off exactly
+where a serial host loop would waste the most.
+
+```bash
+uv run python benchmarks/bench_tasks.py --check                                  # mink parity
+uv run python benchmarks/bench_tasks.py --profile --device cuda:0 --nworld 256 1024 4096
+uv run python benchmarks/bench_tasks.py dual_iiwa --profile --collision-motion sparse --device cuda:0
+```
