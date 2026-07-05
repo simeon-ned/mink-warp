@@ -17,7 +17,7 @@ mink-warp is a **batched differential IK library** on MuJoCo Warp with a
 Typical use cases:
 
 - **Real-time control loops** — one small IK step per tick, output is joint
-  *velocity* :math:`v = \Delta q / dt`, then integrate (legged WBC, teleop,
+  *velocity* :math:`v = \Delta q / dt`, then integrate (legged control, teleop,
   retargeting pipelines).
 - **Many parallel worlds** — ``nworld`` copies of the same robot + task stack
   (multi-agent sim, parameter grids, batched targets).
@@ -80,13 +80,13 @@ Side-by-side
 Why we did not wrap Newton IK
 -----------------------------
 
-1. **Different contract.** Callers of Mink (and most WBC stacks) expect
+1. **Different contract.** Callers of Mink (and most differential-IK control stacks) expect
    *differential* IK: velocity out, integrate every frame. Newton IK's natural
    contract is *optimize* ``q`` until task-space error is small. Bridging the two
    would either hide Newton's strengths or break Mink parity.
 
 2. **Different model path.** mink-warp is intentionally **MjModel → mjwarp** so
-   it drops into the same assets and pipelines as Mink, mjlab, and wbc-mjlab.
+   it drops into the same assets and pipelines as Mink and MuJoCo Warp.
    Newton IK wants a Newton ``Model``; that is a fork, not a swap-in.
 
 3. **Task composability.** Mink's task stack (frame + posture + CoM + soft limits,

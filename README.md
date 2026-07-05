@@ -64,7 +64,7 @@ make docs        # docs/_build/index.html
 make docs-watch  # live reload
 ```
 
-User guide, concepts, and API reference: [docs/](docs/) (Sphinx, mink / wbc-mjlab layout).
+User guide, concepts, and API reference: [docs/](docs/) (Sphinx, Mink-style layout).
 
 ## Benchmarks
 

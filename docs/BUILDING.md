@@ -1,6 +1,6 @@
 # Building the documentation
 
-Sphinx site for mink-warp (layout follows [Mink](https://github.com/kevinzakka/mink) and [wbc-mjlab](https://github.com/wbc-mjlab/wbc-mjlab)).
+Sphinx site for mink-warp (layout follows [Mink](https://github.com/kevinzakka/mink)).
 
 ## Build locally
 

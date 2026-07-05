@@ -1,4 +1,4 @@
-"""Sphinx configuration for mink-warp (mink + mjlab-style layout)."""
+"""Sphinx configuration for mink-warp (Mink-style layout)."""
 
 from __future__ import annotations
 
