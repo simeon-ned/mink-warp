@@ -10,8 +10,8 @@ import numpy as np
 import warp as wp
 
 from ..configuration import Configuration
-from ..kernels.collision import collision_broadphase
-from ..kernels.constrained import reset_ineq_block, scatter_ineq_active
+from ..kernels.collision import collision_broadphase, contact_jac_rows
+from ..kernels.constrained import reset_ineq_block
 from .limit import Limit
 
 Geom = int | str
@@ -20,25 +20,6 @@ CollisionPair = tuple[GeomSequence, GeomSequence]
 CollisionPairs = Sequence[CollisionPair]
 
 _BROADPHASE_MIN_PAIRS = 16
-
-
-def _compute_contact_normal_jacobian(
-    model: mujoco.MjModel,
-    data: mujoco.MjData,
-    geom1_id: int,
-    geom2_id: int,
-    fromto: np.ndarray,
-    normal: np.ndarray,
-    jac1: np.ndarray,
-    jac2: np.ndarray,
-) -> np.ndarray:
-    normal[:] = fromto[3:] - fromto[:3]
-    mujoco.mju_normalize3(normal)
-    geom_bodyid = model.geom_bodyid
-    mujoco.mj_jac(model, data, jac2, None, fromto[3:], geom_bodyid[geom2_id])
-    mujoco.mj_jac(model, data, jac1, None, fromto[:3], geom_bodyid[geom1_id])
-    jac2 -= jac1
-    return normal @ jac2
 
 
 def _is_welded_together(model: mujoco.MjModel, geom_id1: int, geom_id2: int) -> bool:
@@ -116,7 +97,6 @@ class CollisionAvoidanceLimit(Limit):
             return
         model = self.model
         nworld = configuration.nworld
-        nv = configuration.nv
         m = self.max_num_contacts
         device = configuration.device
         self._ensure_dev_stage(device, nworld)
@@ -136,26 +116,24 @@ class CollisionAvoidanceLimit(Limit):
             worlds, candidate = self._prefilter(configuration)
         else:
             worlds, candidate = range(nworld), None
+        # Host narrowphase collects only witness geometry (points, bodies,
+        # normal, bound) per active contact — NOT the Jacobian. mj_kinematics is
+        # enough for mj_geomDistance; the expensive per-contact mj_jac pair is
+        # replaced by batched mujoco_warp.jac on device below.
         data = self._host_data
         fromto = np.empty(6)
-        normal = np.empty(3)
-        jac1 = np.empty((3, nv))
-        jac2 = np.empty((3, nv))
-        # Collect only the ACTIVE (near-collision) rows; the rest of the block
-        # stays inert, so per step only these few rows (not the whole padded
-        # block) cross host -> device.
-        aw: list[int] = []
-        aidx: list[int] = []
-        ag: list[np.ndarray] = []
-        ah: list[float] = []
+        cw: list[int] = []  # world
+        crow: list[int] = []  # row within the collision block
+        cp1: list[np.ndarray] = []
+        cb1: list[int] = []
+        cp2: list[np.ndarray] = []
+        cb2: list[int] = []
+        cn: list[np.ndarray] = []
+        csign: list[float] = []
+        ch: list[float] = []
         for w in worlds:
             data.qpos[:] = q_np[w]
-            # Collision rows need only geom poses (mj_kinematics) and the dof
-            # Jacobian bases (mj_comPos -> cdof); the rest of mj_fwdPosition
-            # (crb, factorM, constraints) is unused here — ~3.4x cheaper, with
-            # bit-identical mj_geomDistance / mj_jac output.
             mujoco.mj_kinematics(model, data)
-            mujoco.mj_comPos(model, data)
             indices = np.nonzero(candidate[w])[0] if candidate is not None else range(m)
             for idx in indices:
                 geom1_id, geom2_id = self.geom_id_pairs[idx]
@@ -164,38 +142,67 @@ class CollisionAvoidanceLimit(Limit):
                 )
                 if abs(dist - distmax) < 1e-12:
                     continue
-                row = _compute_contact_normal_jacobian(
-                    model, data, geom1_id, geom2_id, fromto, normal, jac1, jac2
-                )
+                normal = fromto[3:] - fromto[:3]
+                nrm = float(np.linalg.norm(normal))
+                normal = normal / nrm if nrm > 0.0 else normal
                 h_val = (
                     (gain * (dist - min_dist) / dt) + relaxation
                     if dist > min_dist
                     else relaxation
                 )
-                sign = -1.0 if dist >= 0 else 1.0
-                aw.append(w)
-                aidx.append(int(idx))
-                ag.append(sign * row)
-                ah.append(h_val)
+                cw.append(w)
+                crow.append(int(idx))
+                cp1.append(fromto[:3].copy())
+                cb1.append(int(model.geom_bodyid[geom1_id]))
+                cp2.append(fromto[3:].copy())
+                cb2.append(int(model.geom_bodyid[geom2_id]))
+                cn.append(normal.copy())
+                csign.append(-1.0 if dist >= 0 else 1.0)
+                ch.append(h_val)
 
-        # Reset this limit's block to inert (0, +inf) on device, then scatter only
-        # the K active rows (K*(nv+1) floats) — no full (nworld, m, nv) upload.
+        self._scatter_contacts(
+            configuration, int(row_offset), G, h,
+            cw, crow, cp1, cb1, cp2, cb2, cn, csign, ch,
+        )
+
+    def _scatter_contacts(
+        self, configuration, row_offset, G, h,
+        cw, crow, cp1, cb1, cp2, cb2, cn, csign, ch,
+    ) -> None:
+        """Reset the block, then build every active contact row on device.
+
+        All ``K`` active contacts (across every world) are assembled in a single
+        ``(K, nv)`` kernel launch: each contact's point Jacobians at the two
+        witness points are evaluated inline from ``cdof`` / ``subtree_com`` — the
+        exact ``mj_jac`` formula — so the serial host ``mj_jac`` calls disappear.
+        """
+        device = configuration.device
+        nworld = configuration.nworld
+        wm = configuration.wp_model
+        wd = configuration.wp_data
+        nv = configuration.nv
         with wp.ScopedDevice(device):
+            wp.launch(reset_ineq_block, dim=(nworld, self.max_num_contacts),
+                      inputs=[row_offset], outputs=[G, h])
+            k = len(cw)
+            if not k:
+                return
+            cw_d = wp.array(np.asarray(cw, dtype=np.int32), dtype=wp.int32)
+            crow_d = wp.array(np.asarray(crow, dtype=np.int32), dtype=wp.int32)
+            cp1_d = wp.array(np.asarray(cp1, dtype=np.float32), dtype=wp.vec3)
+            cb1_d = wp.array(np.asarray(cb1, dtype=np.int32), dtype=wp.int32)
+            cp2_d = wp.array(np.asarray(cp2, dtype=np.float32), dtype=wp.vec3)
+            cb2_d = wp.array(np.asarray(cb2, dtype=np.int32), dtype=wp.int32)
+            cn_d = wp.array(np.asarray(cn, dtype=np.float32), dtype=wp.vec3)
+            csign_d = wp.array(np.asarray(csign, dtype=np.float32), dtype=float)
+            ch_d = wp.array(np.asarray(ch, dtype=np.float32), dtype=float)
             wp.launch(
-                reset_ineq_block, dim=(nworld, m),
-                inputs=[int(row_offset)], outputs=[G, h],
+                contact_jac_rows, dim=(k, nv),
+                inputs=[wm.body_rootid, wm.body_isdofancestor, wd.subtree_com,
+                        wd.cdof, cw_d, crow_d, cp1_d, cb1_d, cp2_d, cb2_d, cn_d,
+                        csign_d, ch_d, row_offset],
+                outputs=[G, h],
             )
-            k = len(aw)
-            if k:
-                aw_d = wp.array(np.asarray(aw, dtype=np.int32), dtype=wp.int32)
-                aidx_d = wp.array(np.asarray(aidx, dtype=np.int32), dtype=wp.int32)
-                ag_d = wp.array(np.asarray(ag, dtype=np.float32), dtype=float)
-                ah_d = wp.array(np.asarray(ah, dtype=np.float32), dtype=float)
-                wp.launch(
-                    scatter_ineq_active, dim=k,
-                    inputs=[aw_d, aidx_d, ag_d, ah_d, int(row_offset)],
-                    outputs=[G, h],
-                )
 
     def _prefilter(self, configuration: Configuration):
         """Device broadphase over the batched ``geom_xpos``.
