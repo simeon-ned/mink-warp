@@ -144,7 +144,10 @@ def _dual_iiwa_model() -> mujoco.MjModel:
     return root.compile()
 
 
-def build_dual_iiwa(nworld: int, device: str | None):
+def build_dual_iiwa(nworld: int, device: str | None, motion: str = "dense"):
+    """``motion='dense'`` sweeps the arms through each other (most worlds have a
+    nearby pair every step — prefilter can skip little); ``'sparse'`` keeps each
+    arm on its own side (few worlds ever collide — prefilter skips most)."""
     model = _dual_iiwa_model()
     cfg = mw.Configuration(model, nworld=nworld, device=device)
     q_home = np.tile(np.concatenate([_ARM_HOME_Q, _ARM_HOME_Q]), (nworld, 1))
@@ -173,8 +176,14 @@ def build_dual_iiwa(nworld: int, device: str | None):
     base_r = cfg.get_transform_frame_to_world("r_iiwa/attachment_site", "site").numpy().copy()
     left_ee.set_target(base_l, configuration=cfg)
     right_ee.set_target(base_r, configuration=cfg)
-    pos_a = np.array([0.392, -0.392, 0.6])
-    pos_b = np.array([0.392, 0.392, 0.6])
+    # dense: left arm reaches to +y, right to -y -> they cross in the middle.
+    # sparse: each arm stays on its own side, so pairs are rarely near.
+    if motion == "sparse":
+        pos_a = np.array([0.392, -0.55, 0.6])   # left stays left
+        pos_b = np.array([0.392, 0.55, 0.6])    # right stays right
+    else:
+        pos_a = np.array([0.392, -0.392, 0.6])
+        pos_b = np.array([0.392, 0.392, 0.6])
     phase = np.arange(nworld) * (2.0 * math.pi / max(nworld, 1))
     lt = base_l.copy()
     rt = base_r.copy()
@@ -184,12 +193,19 @@ def build_dual_iiwa(nworld: int, device: str | None):
         bump = 0.2 * np.sin(mu * math.pi) ** 2
         lt[:] = base_l
         rt[:] = base_r
-        lt[:, 4] = pos_a[0] + (pos_b[0] - pos_a[0]) * mu
-        lt[:, 5] = pos_a[1] + (pos_b[1] - pos_a[1]) * mu
-        lt[:, 6] = pos_a[2] + (pos_b[2] - pos_a[2] + bump) * mu
-        rt[:, 4] = pos_b[0] + (pos_a[0] - pos_b[0]) * mu
-        rt[:, 5] = pos_b[1] + (pos_a[1] - pos_b[1]) * mu
-        rt[:, 6] = pos_b[2] + (pos_a[2] - pos_b[2] - bump) * mu
+        if motion == "sparse":
+            # Small local bob on each side; the arms never approach each other.
+            lt[:, 6] = pos_a[2] + 0.15 * mu
+            rt[:, 6] = pos_b[2] + 0.15 * (1.0 - mu)
+            lt[:, 5] = pos_a[1]
+            rt[:, 5] = pos_b[1]
+        else:
+            lt[:, 4] = pos_a[0] + (pos_b[0] - pos_a[0]) * mu
+            lt[:, 5] = pos_a[1] + (pos_b[1] - pos_a[1]) * mu
+            lt[:, 6] = pos_a[2] + (pos_b[2] - pos_a[2] + bump) * mu
+            rt[:, 4] = pos_b[0] + (pos_a[0] - pos_b[0]) * mu
+            rt[:, 5] = pos_b[1] + (pos_a[1] - pos_b[1]) * mu
+            rt[:, 6] = pos_b[2] + (pos_a[2] - pos_b[2] - bump) * mu
         left_ee.set_target(lt, configuration=cfg)
         right_ee.set_target(rt, configuration=cfg)
 
@@ -209,10 +225,9 @@ def _time_hot(s, cfg, dt: float) -> float:
     """Time the host-heavy assembly component in isolation (us)."""
     import warp as wp
 
-    if "hot_task" in s:  # equality: time the eval (error + jacobian)
+    if "hot_task" in s:  # equality: one _eval fills both error + jacobian
         task = s["hot_task"]
         t0 = perf_counter_ns()
-        task.compute_error(cfg)
         task.compute_jacobian(cfg)
         return (perf_counter_ns() - t0) * 1e-3
     # collision: time scatter into fresh G/h buffers
@@ -226,11 +241,15 @@ def _time_hot(s, cfg, dt: float) -> float:
     return (perf_counter_ns() - t0) * 1e-3
 
 
-def run(scene_key, *, nworld, steps, warmup, device, iterations, profile):
-    s = SCENES[scene_key](nworld, device)
+def run(scene_key, *, nworld, steps, warmup, device, iterations, profile, motion="dense"):
+    builder = SCENES[scene_key]
+    s = builder(nworld, device, motion) if scene_key == "dual_iiwa" else builder(nworld, device)
     cfg, tasks, solver, update = s["cfg"], s["tasks"], s["solver"], s["update"]
+    collision = s.get("collision")
+    if collision is not None and not hasattr(collision, "_prefilter_worlds"):
+        collision = None  # baseline limit has no device prefilter to report
 
-    step_us, hot_us = [], []
+    step_us, hot_us, skip = [], [], []
     for i in range(warmup + steps):
         update(i * DT)
         t0 = perf_counter_ns()
@@ -240,6 +259,9 @@ def run(scene_key, *, nworld, steps, warmup, device, iterations, profile):
         if profile:
             common.sync(device)
             hot_us.append(_time_hot(s, cfg, DT))
+            if collision is not None and i >= warmup:
+                surv = collision._prefilter_worlds(cfg).size
+                skip.append(1.0 - surv / nworld)
         if i >= warmup:
             step_us.append(dt_us)
 
@@ -251,6 +273,7 @@ def run(scene_key, *, nworld, steps, warmup, device, iterations, profile):
         hot = common.summarize(hot_us[warmup:] if len(hot_us) > warmup else hot_us)
         out["hot_us"] = hot["mean"]
         out["hot_frac"] = hot["mean"] / st["mean"] if st["mean"] > 0 else 0.0
+        out["skip_pct"] = 100.0 * (sum(skip) / len(skip)) if skip else float("nan")
     return out
 
 
@@ -343,6 +366,9 @@ def main():
     ap.add_argument("--device", default=None)
     ap.add_argument("--profile", action="store_true",
                     help="also report host-assembly component time + fraction")
+    ap.add_argument("--collision-motion", choices=["dense", "sparse"], default="dense",
+                    help="dual_iiwa trajectory: dense crosses the arms (prefilter "
+                         "skips little), sparse keeps them apart (prefilter skips most)")
     ap.add_argument("--check", action="store_true",
                     help="accuracy parity vs mink (world 0), no timing")
     args = ap.parse_args()
@@ -357,19 +383,21 @@ def main():
 
     hdr = f"{'scene':>10} {'nworld':>7} {'solves/s':>12} {'us/solve':>10} {'step us':>10}"
     if args.profile:
-        hdr += f" {'hot us':>10} {'hot %':>7}"
+        hdr += f" {'hot us':>10} {'hot %':>7} {'bp-skip':>8}"
     print(f"# steps={args.steps} warmup={args.warmup} iters={args.iterations} "
-          f"device={args.device}")
+          f"device={args.device} collision-motion={args.collision_motion}")
     print(hdr)
     for sk in scenes:
         for nw in args.nworld:
             r = run(sk, nworld=nw, steps=args.steps, warmup=args.warmup,
                     device=args.device, iterations=args.iterations,
-                    profile=args.profile)
+                    profile=args.profile, motion=args.collision_motion)
             line = (f"{r['scene']:>10} {r['nworld']:>7} {r['solves_per_s']:>12.0f} "
                     f"{r['us_per_solve']:>10.2f} {r['mean_us']:>10.1f}")
             if args.profile:
-                line += f" {r['hot_us']:>10.1f} {100 * r['hot_frac']:>6.1f}%"
+                skip = r.get("skip_pct", float("nan"))
+                skip_s = "     -  " if skip != skip else f"{skip:>6.1f}% "
+                line += f" {r['hot_us']:>10.1f} {100 * r['hot_frac']:>6.1f}% {skip_s:>8}"
             print(line)
 
 
