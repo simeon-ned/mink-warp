@@ -28,8 +28,11 @@ def _dense_efc_jacobian(model: mujoco.MjModel, data: mujoco.MjData) -> np.ndarra
         )
         return efc_j
     # View onto the live efc_J buffer; the caller's row mask (fancy index) makes
-    # the copy, so a full-matrix .copy() here would be redundant work.
-    return data.efc_J.reshape((data.nefc, model.nv))
+    # the copy, so a full-matrix .copy() here would be redundant work. Slice to
+    # exactly nefc*nv first: MuJoCo can leave efc_J sized for the pre-analysis
+    # row count and shrink nefc after pruning structurally-zero rows without
+    # shrinking the buffer, so a bare reshape((nefc, nv)) may otherwise raise.
+    return data.efc_J[: data.nefc * model.nv].reshape((data.nefc, model.nv))
 
 
 class EqualityConstraintTask(Task):
