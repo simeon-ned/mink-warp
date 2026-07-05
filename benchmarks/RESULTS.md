@@ -295,42 +295,55 @@ mink parity floor is exactly the feature branch's: equality `|Δe| 3.7e-9`,
 Optimizations (all parity-preserving):
 - **Equality:** `mj_forward → mj_fwdPosition` (equality `efc_pos`/`efc_J` are
   position-only) + drop a redundant `efc_J` copy.
-- **Collision:** a **device broadphase** kernel runs the geom-pair proximity
-  tests in parallel over every `(world, pair)` off the batched `geom_xpos`;
-  worlds with no nearby pair skip the host narrowphase entirely. Plus a
-  **slice scatter** that uploads only the collision block into `G/h` at its row
-  offset instead of round-tripping the whole padded QP buffer each step.
+- **Collision** (four layers, each moving more of the step off the serial host):
+  1. **Device broadphase** — a kernel runs the geom-pair proximity tests in
+     parallel over every `(world, pair)` off the batched `geom_xpos`, emitting a
+     candidate mask; worlds with no nearby pair skip host work, and the mask
+     replaces the per-world host numpy broadphase.
+  2. **`mj_fwdPosition → mj_kinematics`** in the narrowphase (geom distances need
+     only geom poses).
+  3. **Device contact Jacobian** — the per-contact host `mj_jac` pair (the bulk
+     of host time) is gone: a single `(K, nv)` kernel evaluates both witness
+     Jacobians inline from `cdof`/`subtree_com` (the exact `mj_jac` formula) and
+     assembles `sign·nᵀ(J2−J1)` for every active contact across all worlds at once.
+  4. **Vectorized host collection + compact scatter** — `mj_geomDistance` writes
+     witnesses into a preallocated buffer; normals/bounds/signs are derived
+     vectorised; only the `K` active rows (not the padded block) reach device.
 
 Throughput on an RTX 4070 Ti SUPER (eager, `--collision-motion dense`):
 
 | scene | worlds | baseline solves/s | optimized solves/s | speedup | host share (base → opt) |
 |---|--:|--:|--:|--:|--:|
-| cassie (nv=32, equality)   | 256  |  9,448 | 11,208 | 1.19× | 44% → 34% |
-| cassie (nv=32, equality)   | 1024 | 16,110 | 22,891 | 1.42× | 74% → 64% |
-| cassie (nv=32, equality)   | 4096 | 20,297 | 31,193 | **1.54×** | 92% → 87% |
-| dual iiwa (nv=14, collision) | 256  | 18,925 | 31,223 | 1.65× | 89% → 83% |
-| dual iiwa (nv=14, collision) | 1024 | 20,543 | 35,493 | 1.73× | 95% → 92% |
-| dual iiwa (nv=14, collision) | 4096 | 20,214 | 37,101 | **1.84×** | 95% → 95% |
+| cassie (nv=32, equality)   | 256  |  9,367 | 11,241 | 1.20× | 44% → 33% |
+| cassie (nv=32, equality)   | 1024 | 16,357 | 22,651 | 1.38× | 74% → 64% |
+| cassie (nv=32, equality)   | 4096 | 20,365 | 30,947 | 1.52× | 92% → 87% |
+| dual iiwa (nv=14, collision) | 256  | 18,528 |  92,873 | **5.0×** | 91% → 51% |
+| dual iiwa (nv=14, collision) | 1024 | 20,326 | 155,870 | **7.7×** | 95% → 71% |
+| dual iiwa (nv=14, collision) | 4096 | 19,950 | 192,514 | **9.7×** | 95% → 80% |
 
-The speedup grows with the batch: the bigger the batch, the more the host
-assembly dominates, so shrinking it moves the whole step. Baseline = the feature
-branch's own `mj_forward` + full-buffer-round-trip code.
+The collision speedup grows with the batch: the bigger the batch, the more the
+host assembly dominated the baseline, so moving the Jacobian + narrowphase
+assembly to a batched device pass (and shrinking the Python per-contact work)
+lifts the whole step — 9.7× at 4096 worlds with **bit-identical** rows. Baseline
+= the feature branch's own `mj_forward` + per-contact `mj_jac` + full-buffer
+round-trip code.
 
 **Device broadphase, data-dependent.** The `dense` trajectory sweeps the arms
 through each other, so ~⅓ of the (phase-offset) worlds are near every step
 (`bp-skip ≈ 67%`). When collisions are sparse (`--collision-motion sparse`, arms
 kept on their own sides) the prefilter drops **every** world it can
-(`bp-skip = 100%`) and the host narrowphase all but vanishes:
+(`bp-skip = 100%`) and host narrowphase all but vanishes — throughput then
+approaches the pure batched-solve rate:
 
 | worlds | dense host `hot µs` | sparse host `hot µs` | sparse solves/s |
 |---|--:|--:|--:|
-| 256  |  6,791 |   379 | 152,010 |
-| 1024 | 26,524 | 1,196 | 323,665 |
-| 4096 | 105,261 | 3,857 | 509,283 |
+| 256  |  1,396 |   154 | 171,688 |
+| 1024 |  4,630 |   282 | 461,293 |
+| 4096 | 17,106 |   509 | 892,070 |
 
-At 4096 worlds the parallel pair checks cut host assembly ~27× (105 ms → 3.9 ms)
-when few worlds actually collide — the batched-GPU broadphase paying off exactly
-where a serial host loop would waste the most.
+At 4096 worlds the sparse case sustains **892 k solves/s** (44× the baseline's
+20 k), and even the dense case holds 193 k — the batched-GPU broadphase +
+Jacobian paying off exactly where a serial host loop wasted the most.
 
 ```bash
 uv run python benchmarks/bench_tasks.py --check                                  # mink parity
