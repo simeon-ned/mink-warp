@@ -246,7 +246,7 @@ def run(scene_key, *, nworld, steps, warmup, device, iterations, profile, motion
     s = builder(nworld, device, motion) if scene_key == "dual_iiwa" else builder(nworld, device)
     cfg, tasks, solver, update = s["cfg"], s["tasks"], s["solver"], s["update"]
     collision = s.get("collision")
-    if collision is not None and not hasattr(collision, "_prefilter_worlds"):
+    if collision is not None and not hasattr(collision, "_prefilter"):
         collision = None  # baseline limit has no device prefilter to report
 
     step_us, hot_us, skip = [], [], []
@@ -260,7 +260,7 @@ def run(scene_key, *, nworld, steps, warmup, device, iterations, profile, motion
             common.sync(device)
             hot_us.append(_time_hot(s, cfg, DT))
             if collision is not None and i >= warmup:
-                surv = collision._prefilter_worlds(cfg).size
+                surv = collision._prefilter(cfg)[0].size
                 skip.append(1.0 - surv / nworld)
         if i >= warmup:
             step_us.append(dt_us)
