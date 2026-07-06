@@ -49,7 +49,25 @@ def _passes_contype_conaffinity(
 
 
 class CollisionAvoidanceLimit(Limit):
-    """Normal-velocity limit between geom pairs (Mink-compatible)."""
+    r"""Normal-velocity collision avoidance between geom pairs.
+
+    For each active pair with signed distance :math:`d` (negative when
+    penetrating), unit normal :math:`n` (from geom 1 toward geom 2), and
+    witness Jacobian row :math:`J_n`, the limit contributes:
+
+    .. math::
+
+        J_n\, \Delta q \leq h, \quad
+        h = \begin{cases}
+            \gamma (d - d_{\min}) / \mathrm{d}t + \varepsilon & d > d_{\min} \\
+            \varepsilon & \text{otherwise}
+        \end{cases}
+
+    where :math:`d_{\min}` is ``minimum_distance_from_collisions``,
+    :math:`\gamma` is ``gain``, and :math:`\varepsilon` is ``bound_relaxation``.
+    Matches Mink's ``CollisionAvoidanceLimit``; distances are queried on the
+    host per world, Jacobian rows assembled on device.
+    """
 
     box_capable = False
     supports_cuda_graph = False

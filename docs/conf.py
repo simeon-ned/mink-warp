@@ -78,6 +78,7 @@ html_theme = "sphinx_book_theme"
 html_show_sphinx = False
 html_last_updated_fmt = ""
 html_static_path = ["_static"]
+html_css_files = ["refs.css"]
 
 html_theme_options = {
     "path_to_docs": "docs/",

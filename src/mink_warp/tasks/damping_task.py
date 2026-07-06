@@ -13,7 +13,13 @@ from .posture_task import PostureTask
 
 
 class DampingTask(PostureTask):
-    """L2 regularization on joint velocities (error is identically zero)."""
+    r"""L2 regularization on joint velocities.
+
+    Sets :math:`e(q) = 0` and :math:`J = I_{n_v}` with ``gain=0``, so the task
+    contributes only through the weighted Jacobian term in :math:`H = J^\top W^2 J`,
+    penalizing large :math:`\Delta q` (velocity when divided by
+    :math:`\mathrm{d}t`). Cost units match :class:`PostureTask`.
+    """
 
     def __init__(self, model, cost: npt.ArrayLike):
         super().__init__(model, cost, gain=0.0, lm_damping=0.0)

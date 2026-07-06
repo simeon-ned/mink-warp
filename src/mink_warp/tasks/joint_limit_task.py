@@ -14,7 +14,21 @@ from .task import Task
 
 
 class JointLimitTask(Task):
-    """Soft hinge/slide joint limits (free/ball ignored)."""
+    r"""Soft hinge/slide joint limits as a least-squares penalty.
+
+    When :math:`q_i` violates bounds :math:`[q_i^{\min}, q_i^{\max}]`:
+
+    .. math::
+
+        e_i = \begin{cases}
+            q_i - q_i^{\max} & q_i > q_i^{\max} \\
+            q_i - q_i^{\min} & q_i < q_i^{\min} \\
+            0 & \text{otherwise}
+        \end{cases}
+
+    with :math:`J_{ii} = 1` on limited dofs. Free and ball joints are ignored.
+    For **hard** limits use :class:`~mink_warp.ConfigurationLimit`.
+    """
 
     def __init__(
         self,

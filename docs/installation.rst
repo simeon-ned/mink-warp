@@ -57,6 +57,7 @@ Related projects
   (QP-based); API reference for tasks and limits.
 - `MuJoCo Warp <https://github.com/google-deepmind/mujoco_warp>`_ — batched MuJoCo
   simulation on GPU [MuJoCoWarp]_.
-- `Newton <https://github.com/google-deepmind/newton>`_ — GPU physics + batch pose
-  IK [Newton]_; mink-warp reuses solver *patterns* but not the Newton API (see
+- `Newton <https://github.com/newton-physics/newton>`_ [Newton]_ — open-source,
+  GPU-accelerated physics on NVIDIA Warp (NVIDIA + Google DeepMind); batch pose
+  IK and sim. mink-warp reuses solver *patterns* but not the Newton API (see
   :doc:`source/concepts/why_mink_warp`).

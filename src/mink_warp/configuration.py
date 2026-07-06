@@ -24,11 +24,14 @@ from .lie import SE3
 
 
 class Configuration:
-    """Batched robot configuration backed by MuJoCo Warp.
+    r"""Batched robot configuration backed by MuJoCo Warp.
 
-    Device-native API (Newton-style): ``q``, Jacobians, and poses are
-    ``wp.array``. Use ``.numpy()`` or the ``*_numpy`` / ``*_se3`` helpers only
-    at host boundaries.
+    Holds ``q`` with shape ``(nworld, nq)``, device FK buffers, and body-frame
+    Jacobians. Configuration-dependent quantities (frame poses, CoM, contacts)
+    are valid after forward kinematics on ``wp_data``.
+
+    Device-native API: hot-path arrays are ``wp.array``. Use ``.numpy()`` or
+    :class:`~mink_warp.SE3` helpers only at host boundaries.
     """
 
     def __init__(

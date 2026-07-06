@@ -20,10 +20,17 @@ from .task import TargetedTask
 
 
 class PostureTask(TargetedTask):
-    """Regulate configuration toward a target posture.
+    r"""Regulate joint coordinates toward a nominal posture.
 
-    Uses device ``mj_differentiatePos`` for free/ball/hinge/slide joints.
-    Free-joint dofs are zeroed in the residual (Mink behavior).
+    .. math::
+
+        e(q) = \mathrm{diff}(q, q^\star), \qquad J(q) = I_{n_v}
+
+    where :math:`\mathrm{diff}` is MuJoCo's ``mj_differentiatePos`` (handles
+    hinge, slide, ball, and free joints). Free-joint rows are zeroed in the
+    residual (Mink behaviour). Cost units:
+    :math:`[\mathrm{cost}] / [\mathrm{rad}]` for revolute joints,
+    :math:`[\mathrm{cost}] / [\mathrm{m}]` for prismatic joints.
     """
 
     def __init__(

@@ -3,10 +3,22 @@
 Why mink-warp (and not Newton IK)?
 ==================================
 
-mink-warp and `Newton IK <https://github.com/google-deepmind/newton>`_ [Newton]_
+mink-warp and `Newton <https://github.com/newton-physics/newton>`_ [Newton]_
 both run batched inverse kinematics on the GPU, but they solve **different
 problems** for **different callers**. This page states what mink-warp is for and
 when Newton is the better choice.
+
+What Newton is
+--------------
+
+`Newton <https://github.com/newton-physics/newton>`_ is an open-source,
+GPU-accelerated, extensible **physics engine** for robot learning and development
+(NVIDIA and Google DeepMind). It is built on `NVIDIA Warp
+<https://developer.nvidia.com/warp>`_, integrates with learning stacks such as
+`MuJoCo Playground <https://github.com/google-deepmind/mujoco_playground>`_ and
+`NVIDIA Isaac Lab <https://developer.nvidia.com/isaac/lab>`_, and ships an IK
+module (``newton.ik``) alongside full simulation. See the `Newton documentation
+<https://newton-physics.github.io/newton/>`_.
 
 What mink-warp is for
 ---------------------
@@ -32,8 +44,7 @@ constrained (QP inequality) solves, and integration — nothing else.
 What Newton IK is for
 ---------------------
 
-Newton IK is part of the **Newton physics platform**. Its ``newton.ik.IKSolver``
-is a **batch pose-to-configuration optimizer**:
+Within Newton, ``newton.ik.IKSolver`` is a **batch pose-to-configuration optimizer**:
 
 - Objectives are link **positions** and **orientations** (plus optional joint-limit
   penalties), not Mink-style composable tasks.
@@ -129,4 +140,5 @@ Related
 - :doc:`architecture`
 - :doc:`mink_parity`
 - :doc:`../workflows/solvers`
-- `Newton IK tutorial <https://github.com/google-deepmind/newton/blob/main/docs/tutorials/01_robotics.ipynb>`_
+- `Newton robotics tutorial <https://github.com/newton-physics/newton/blob/main/docs/tutorials/01_robotics.ipynb>`_
+- `Newton documentation <https://newton-physics.github.io/newton/>`_

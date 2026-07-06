@@ -18,10 +18,31 @@ from .task import TargetedTask
 
 
 class FrameTask(TargetedTask):
-    """Regulate a body/geom/site frame.
+    r"""Regulate the pose of a body, geom, or site in the world frame.
 
-    * :math:`e(q) = \\log(T_{bt})`
-    * :math:`J(q) = -\\mathrm{jlog}(T_{tb})\\, {}_b J_{wb}`
+    The error is a body twist :math:`e(q) \in \mathbb{R}^6` (linear then angular)
+    expressed in the regulated frame :math:`b`. With target frame :math:`t` and
+    world frame :math:`0`:
+
+    .. math::
+
+        e(q) := \log(T_{bt}) = \log(T_{b0}^{-1} T_{t0})
+
+    The Jacobian (Mink / Pink body-frame convention) is:
+
+    .. math::
+
+        J(q) = -\mathrm{jlog}_6(T_{tb})\, {}_b J_{0b}(q)
+
+    Costs homogenize SI units: ``position_cost`` is in
+    :math:`[\mathrm{cost}] / [\mathrm{m}]`, ``orientation_cost`` in
+    :math:`[\mathrm{cost}] / [\mathrm{rad}]`. A 1 cm position error at unit
+    position cost weighs like a 1 rad error at unit orientation cost only when
+    the costs are chosen accordingly.
+
+    See Also:
+        :class:`RelativeFrameTask` when the target is expressed in a mobile
+        root frame rather than the world.
     """
 
     k: int = 6
@@ -36,6 +57,18 @@ class FrameTask(TargetedTask):
         gain: float = 1.0,
         lm_damping: float = 0.0,
     ):
+        r"""Define a frame task.
+
+        Args:
+            frame_name: MuJoCo frame name (body, geom, or site).
+            frame_type: ``"body"``, ``"geom"``, or ``"site"``.
+            position_cost: Weight on position error, in
+                :math:`[\mathrm{cost}] / [\mathrm{m}]` (scalar or 3-vector).
+            orientation_cost: Weight on orientation error, in
+                :math:`[\mathrm{cost}] / [\mathrm{rad}]` (scalar or 3-vector).
+            gain: Task gain :math:`\alpha \in [0, 1]`.
+            lm_damping: LM damping scale (see :class:`Task`).
+        """
         super().__init__(cost=np.zeros(6), gain=gain, lm_damping=lm_damping)
         self.frame_name = frame_name
         self.frame_type = frame_type

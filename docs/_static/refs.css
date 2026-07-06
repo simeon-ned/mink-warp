@@ -1,0 +1,12 @@
+.mw-cite-keys {
+  display: none;
+}
+
+/* Tighter bibliography + cite control alignment */
+.mw-bib-entry {
+  margin-bottom: 1rem;
+}
+
+.mw-bib-entry .sd-card-body {
+  padding-top: 0.25rem;
+}
