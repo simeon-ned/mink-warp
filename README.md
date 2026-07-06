@@ -6,9 +6,9 @@ Batched differential inverse kinematics on [MuJoCo Warp](https://github.com/goog
 
 Device-native pipeline: FK / Jacobians / tasks, normal-equation assembly, batched Cholesky solve, **constrained ADMM** (box + general inequalities), mjwarp position integrate, optional CUDA graph capture.
 
-**Tasks:** `FrameTask`, `PostureTask`, `DampingTask`, `ComTask`, `JointLimitTask` (alias `ConfigurationLimitTask`).
+**Tasks:** `FrameTask`, `RelativeFrameTask`, `PostureTask`, `DampingTask`, `ComTask`, `EqualityConstraintTask`, `JointLimitTask` (alias `ConfigurationLimitTask`).
 
-**Hard limits:** `ConfigurationLimit`, `VelocityLimit`, `LinearInequalityLimit` via `ConstrainedSolver` or `solve_ik(..., limits=…)` (Mink QP equivalent).
+**Hard limits:** `ConfigurationLimit`, `VelocityLimit`, `CollisionAvoidanceLimit`, `LinearInequalityLimit` via `ConstrainedSolver` or `solve_ik(..., limits=…)` (Mink QP equivalent).
 
 **Layout:**
 
@@ -49,12 +49,17 @@ v = mink_warp.solve_ik(cfg, [frame, posture], dt=0.01, limits=None)
 
 ## Demos
 
+Examples are numbered by increasing complexity:
+
 ```bash
-uv run examples/batched_panda_ik.py
-uv run examples/batched_g1_ik.py
+uv run examples/01_panda_ik.py                  # FrameTask + soft limits
+uv run examples/02_constrained_ur5e.py          # hard limits (config + collision + velocity)
+uv run examples/03_equality_cassie.py             # closed-chain equality task
+uv run examples/04_self_collision_dual_iiwa.py  # inter-arm self-collision (Kuka)
+uv run examples/05_relative_frame_g1.py           # RelativeFrameTask + collision (G1)
 ```
 
-Assets: `examples/franka_emika_panda/`, `examples/unitree_g1/` (vendored from Mink).
+Assets: `examples/franka_emika_panda/`, `examples/kuka_iiwa_14/`, `examples/unitree_g1/`, `examples/universal_robots_ur5e/`, `examples/agility_cassie/` (vendored from Mink).
 
 ## Documentation
 

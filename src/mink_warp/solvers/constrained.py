@@ -195,6 +195,8 @@ class ConstrainedSolver(Solver):
             use_graph
             and iterations == 1
             and wp.get_device(self.configuration.device).is_cuda
+            and all(getattr(t, "supports_cuda_graph", True) for t in tasks)
+            and all(getattr(lim, "supports_cuda_graph", True) for lim in self.limits)
         ):
             self._ensure_graph(tasks, dt, damping)
             if self._graph is not None:

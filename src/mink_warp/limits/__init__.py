@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .collision_avoidance import CollisionAvoidanceLimit
 from .configuration_limit import ConfigurationLimit
 from .limit import Limit
 from .linear_inequality import LinearInequalityLimit
@@ -12,4 +13,5 @@ __all__ = [
     "ConfigurationLimit",
     "VelocityLimit",
     "LinearInequalityLimit",
+    "CollisionAvoidanceLimit",
 ]

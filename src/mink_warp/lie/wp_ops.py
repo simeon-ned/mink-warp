@@ -186,6 +186,41 @@ def se3_jlog(q: wp.vec4, t: wp.vec3) -> wp.spatial_matrix:
 
 
 @wp.func
+def se3_adjoint(q: wp.vec4, t: wp.vec3) -> wp.spatial_matrix:
+    """Adjoint matrix Ad(T) for T = (q, t), wxyz quaternion."""
+    e0 = quat_rotate_wxyz(q, wp.vec3(1.0, 0.0, 0.0))
+    e1 = quat_rotate_wxyz(q, wp.vec3(0.0, 1.0, 0.0))
+    e2 = quat_rotate_wxyz(q, wp.vec3(0.0, 0.0, 1.0))
+    R = wp.mat33(e0[0], e1[0], e2[0], e0[1], e1[1], e2[1], e0[2], e1[2], e2[2])
+    tx = skew(t) * R
+    out = wp.spatial_matrix()
+    for i in range(6):
+        for j in range(6):
+            out[i, j] = 0.0
+    for i in range(3):
+        for j in range(3):
+            out[i, j] = R[i, j]
+            out[i, j + 3] = tx[i, j]
+            out[i + 3, j + 3] = R[i, j]
+    return out
+
+
+@wp.func
+def se3_compose_inv(
+    q_root: wp.vec4,
+    t_root: wp.vec3,
+    q_frame: wp.vec4,
+    t_frame: wp.vec3,
+):
+    """Relative pose root^{-1} @ frame as (q, t)."""
+    q_inv = quat_conj_wxyz(q_root)
+    t_inv = quat_rotate_wxyz(q_inv, -t_root)
+    q = quat_mul_wxyz(q_inv, q_frame)
+    t = quat_rotate_wxyz(q_inv, t_frame) + t_inv
+    return q, t
+
+
+@wp.func
 def spatial_mat_mul_vec(
     m: wp.spatial_matrix, v: wp.spatial_vector
 ) -> wp.spatial_vector:

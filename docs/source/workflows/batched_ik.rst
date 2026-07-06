@@ -48,13 +48,38 @@ Solver loop
 Demos
 -----
 
-Full batched examples with mjviser:
+Numbered examples under ``examples/`` (increasing complexity):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 12 35 53
+
+   * - #
+     - Script
+     - Topic
+   * - 01
+     - ``01_panda_ik.py``
+     - Basic ``FrameTask`` + ``IKSolver``
+   * - 02
+     - ``02_constrained_ur5e.py``
+     - Hard limits + collision vs environment
+   * - 03
+     - ``03_equality_cassie.py``
+     - ``EqualityConstraintTask``
+   * - 04
+     - ``04_self_collision_dual_iiwa.py``
+     - Inter-arm collision avoidance
+   * - 05
+     - ``05_relative_frame_g1.py``
+     - ``RelativeFrameTask`` + humanoid collision
 
 .. code-block:: bash
 
    uv sync --extra examples
-   uv run examples/batched_panda_ik.py
-   uv run examples/batched_g1_ik.py
+   uv run examples/01_panda_ik.py
+   uv run examples/05_relative_frame_g1.py
+
+Full table: :doc:`../examples`.
 
 Assets live under ``examples/franka_emika_panda/`` and ``examples/unitree_g1/``.
 
@@ -62,7 +87,7 @@ Performance notes
 -----------------
 
 - Prefer keeping ``q``, targets, and task buffers on device across steps.
-- Re-upload targets only when they change (see G1 demo resample cadence).
+- Re-upload targets only when they change (see ``05_relative_frame_g1.py``).
 - Cholesky tile solve cost is ~flat in ``nworld``; FK + Jacobian assembly often
   dominate at moderate ``nv`` (see :doc:`../benchmarks`).
 

@@ -21,17 +21,25 @@ for a full comparison with Newton IK and when to use each.
 Key features
 ------------
 
-- **Mink-shaped API** — ``Configuration``, ``FrameTask``, ``PostureTask``,
-  ``solve_ik``, body-frame Jacobians, and host ``SE3`` / ``SO3`` helpers.
+- **Mink-shaped API** — :class:`~mink_warp.Configuration`,
+  :class:`~mink_warp.FrameTask`, :class:`~mink_warp.RelativeFrameTask`,
+  :class:`~mink_warp.EqualityConstraintTask`, :func:`~mink_warp.solve_ik`,
+  and :class:`~mink_warp.SE3` / :class:`~mink_warp.SO3` helpers.
+- **Hard limits** — :class:`~mink_warp.ConfigurationLimit`,
+  :class:`~mink_warp.VelocityLimit`,
+  :class:`~mink_warp.CollisionAvoidanceLimit`,
+  :class:`~mink_warp.LinearInequalityLimit` via
+  :class:`~mink_warp.ConstrainedSolver`.
 - **Device-native hot path** — FK, Jacobians, residual assembly, and linear
   solves run as Warp kernels on ``wp.array`` buffers; NumPy only at boundaries.
 - **Batched by design** — ``nworld`` parallel instances share one model and one
-  launch grid (Panda grids, multi-agent IK, parameter sweeps).
+  launch grid (multi-agent IK, parameter sweeps).
 - **Interchangeable solvers** — damped least squares (default), Levenberg–Marquardt,
-  L-BFGS, and **constrained ADMM** for hard limits (box + general ``G Δq ≤ h``,
-  Mink QP equivalent).
+  L-BFGS, and constrained ADMM.
 - **CUDA graph capture** — optional one-step ``solve_and_integrate`` graph for
-  fixed task sets in control loops.
+  fixed task sets (disabled when a task/limit requires host reads).
+- **Runnable demos** — numbered ``examples/01_…`` through ``05_…`` (mjviser);
+  see :doc:`source/examples`.
 
 Minimal example
 ---------------

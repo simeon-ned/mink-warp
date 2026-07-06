@@ -17,6 +17,8 @@ from .exceptions import UnsupportedFrame as UnsupportedFrame
 from .interop import to_wp as to_wp
 from .lie import SE3 as SE3
 from .lie import SO3 as SO3
+from .exceptions import InvalidConstraint as InvalidConstraint
+from .limits import CollisionAvoidanceLimit as CollisionAvoidanceLimit
 from .limits import ConfigurationLimit as ConfigurationLimit
 from .limits import Limit as Limit
 from .limits import LinearInequalityLimit as LinearInequalityLimit
@@ -33,9 +35,11 @@ from .solvers import make_solver as make_solver
 from .tasks import ComTask as ComTask
 from .tasks import ConfigurationLimitTask as ConfigurationLimitTask
 from .tasks import DampingTask as DampingTask
+from .tasks import EqualityConstraintTask as EqualityConstraintTask
 from .tasks import FrameTask as FrameTask
 from .tasks import JointLimitTask as JointLimitTask
 from .tasks import PostureTask as PostureTask
+from .tasks import RelativeFrameTask as RelativeFrameTask
 from .tasks import Task as Task
 from .utils import get_freejoint_dims as get_freejoint_dims
 

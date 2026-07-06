@@ -27,6 +27,8 @@ Suggested reading order
      - :doc:`../workflows/quickstart` — single-world IK loop
    * - **Scaling out**
      - :doc:`../workflows/batched_ik` — ``nworld`` patterns
+   * - **Demos**
+     - :doc:`../examples` — numbered ``01_…`` – ``05_…`` scripts
 
 Where to go next
 ----------------

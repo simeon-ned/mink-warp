@@ -19,3 +19,13 @@ FRAME_TO_XMAT_ATTR = {
     "geom": "geom_xmat",
     "site": "site_xmat",
 }
+
+
+def constraint_width(constraint: int) -> int:
+    """Dimensionality of an equality constraint in MuJoCo ``efc_*`` arrays."""
+    return {
+        mujoco.mjtEq.mjEQ_CONNECT.value: 3,
+        mujoco.mjtEq.mjEQ_WELD.value: 6,
+        mujoco.mjtEq.mjEQ_JOINT.value: 1,
+        mujoco.mjtEq.mjEQ_TENDON.value: 1,
+    }[constraint]

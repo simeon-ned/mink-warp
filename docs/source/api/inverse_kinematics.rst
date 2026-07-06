@@ -4,11 +4,12 @@ Inverse kinematics
 Functional API
 --------------
 
-.. autofunction:: mink_warp.solve_ik.solve_ik
+.. autofunction:: mink_warp.solve_ik
 
-.. autofunction:: mink_warp.solve_ik.solve_ik_iterations
+.. autofunction:: mink_warp.solve_ik_iterations
 
-Aliases
--------
+Solver alias
+------------
 
-.. autodata:: mink_warp.IKSolver
+``mink_warp.IKSolver`` is an alias for :class:`~mink_warp.DLSSolver` (Mink's
+default differential step). See :doc:`solvers`.

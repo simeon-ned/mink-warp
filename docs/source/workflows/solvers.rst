@@ -3,7 +3,7 @@
 Solver backends
 ===============
 
-All backends implement :class:`~mink_warp.solvers.base.Solver` and minimise the
+All backends implement :class:`~mink_warp.Solver` and minimise the
 same weighted least-squares task cost. Pick based on step semantics and whether
 you need **hard limits**.
 
@@ -30,7 +30,7 @@ Quick reference
      - ``"constrained"``
      - Hard limits via box / general-inequality ADMM (Mink QP equivalent)
 
-Only :class:`~mink_warp.solvers.ConstrainedSolver` has ``supports_limits = True``.
+Only :class:`~mink_warp.ConstrainedSolver` has ``supports_limits = True``.
 Cost-only backends (DLS / LM / L-BFGS) ignore ``limits=`` if passed explicitly.
 
 Damped least squares (default)
@@ -42,7 +42,7 @@ Damped least squares (default)
    v = solver.solve(tasks, dt=0.01)
    cfg.integrate_inplace(v, dt)
 
-:class:`~mink_warp.solvers.DLSSolver` is also exposed as ``mw.IKSolver``.
+:class:`~mink_warp.DLSSolver` is also exposed as ``mink_warp.IKSolver``.
 
 Levenberg–Marquardt
 -------------------
