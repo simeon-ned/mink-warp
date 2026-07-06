@@ -1,4 +1,11 @@
-"""Task base classes."""
+r"""Kinematic task base classes.
+
+In mink-warp, all tasks derive from :class:`Task`. Each task defines an error
+:math:`e(q) \in \mathbb{R}^k` and Jacobian :math:`J(q) \in \mathbb{R}^{k \times n_v}`
+evaluated in parallel for ``nworld`` configurations. The stacking formalism
+matches Mink / Pink; see also `task-based inverse kinematics
+<https://scaron.info/robot-locomotion/inverse-kinematics.html>`_.
+"""
 
 from __future__ import annotations
 
@@ -15,7 +22,16 @@ from ..kernels.residual import weighted_residual
 
 
 class Task(abc.ABC):
-    """Kinematic task with device-native error and Jacobian."""
+    r"""Abstract base class for kinematic tasks.
+
+    Attributes:
+        cost: Weight vector (same dimension as the task error). Units depend on
+            the task (e.g. :math:`[\mathrm{cost}] / [\mathrm{m}]` for position).
+        gain: Task gain :math:`\alpha \in [0, 1]` for low-pass filtering.
+            Defaults to ``1.0`` (dead-beat).
+        lm_damping: Unitless Levenberg–Marquardt scale (active when the error
+            is large). Helps under infeasible targets.
+    """
 
     k: int = 0
     #: False when :meth:`_eval` reads device state on the host (e.g. ``q.numpy()``);
@@ -120,7 +136,35 @@ class Task(abc.ABC):
     def compute_residual(
         self, configuration: Configuration
     ) -> tuple[wp.array, wp.array, wp.array]:
-        """Weighted residual ``(W, e, mu)`` for the IK normal equations."""
+        r"""Weighted residual ``(W, e, mu)`` for the IK normal equations.
+
+        Tasks are stacked into a least-squares objective equivalent to Mink's QP
+        cost:
+
+        .. math::
+
+            \frac{1}{2} \| W J \Delta q + \alpha e \|_2^2
+            = \frac{1}{2} \Delta q^\top H \Delta q + c^\top \Delta q
+
+        with :math:`H = \sum_i W_i^\top W_i + \mu I` and
+        :math:`c = \sum_i -W_i^\top (\alpha e_i)`. Here :math:`W` is a diagonal
+        weight matrix from ``cost``, :math:`\alpha` is ``gain``, and
+        :math:`\mu` is the per-task LM term from ``lm_damping``.
+
+        First-order task dynamics (per task, before stacking):
+
+        .. math::
+
+            J(q)\, \Delta q = -\alpha\, e(q)
+
+        Args:
+            configuration: Batched robot configuration :math:`q` with shape
+                ``(nworld, nq)``.
+
+        Returns:
+            Weighted Jacobian :math:`WJ`, weighted error :math:`-\alpha W e`,
+            and scalar LM damping :math:`\mu` per world.
+        """
         self._ensure_buffers(configuration)
         self._eval(configuration)
         assert self._error is not None
@@ -153,7 +197,12 @@ class Task(abc.ABC):
 
 
 class TargetedTask(Task):
-    """Task with a device target buffer and optional host upload."""
+    r"""Task with a batched device target buffer.
+
+    Targets are ``wp.array`` with shape ``(nworld, target_width)`` or a single
+    row broadcast to all worlds. Host uploads use :func:`~mink_warp.to_wp` at
+    boundaries.
+    """
 
     target_width: int = 0
 

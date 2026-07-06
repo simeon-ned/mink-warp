@@ -22,7 +22,7 @@ import mink_warp as mw
 
 from _viser_utils import grid_origins
 
-NUM_WORLDS = 128
+NUM_WORLDS = 1024
 DT = 0.01
 FREQUENCY = 50.0
 ENV_SPACING = 2.5

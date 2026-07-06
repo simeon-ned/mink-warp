@@ -36,11 +36,15 @@ def _dense_efc_jacobian(model: mujoco.MjModel, data: mujoco.MjData) -> np.ndarra
 
 
 class EqualityConstraintTask(Task):
-    """Regulate MuJoCo equality constraints (loop joints, welds, etc.).
+    r"""Regulate MuJoCo equality constraints (connect, weld, joint equality, …).
 
-    Uses host ``mj_forward`` + ``efc_pos`` / ``efc_J`` per world (MuJoCo Warp
-    does not yet expose batched equality rows). Suitable for closed-chain
-    mechanisms at moderate ``nworld``.
+    .. math::
+
+        e(q) = \mathrm{efc\_pos}(q), \qquad J(q) = \mathrm{efc\_J}(q)
+
+    Rows are read from host ``mj_forward`` per world (MuJoCo Warp does not yet
+    expose batched equality data). Suitable for closed chains at moderate
+    ``nworld``.
     """
 
     supports_cuda_graph = False

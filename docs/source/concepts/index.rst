@@ -21,6 +21,8 @@ Suggested reading order
      - :doc:`../workflows/constrained` — box vs general ``G Δq ≤ h`` ADMM
    * - **Layer stack**
      - :doc:`architecture` — Configuration → tasks → solver → integrate
+   * - **Notation / math**
+     - :doc:`notation` — frames, errors, stacked :math:`H, c`
    * - **Mink compatibility**
      - :doc:`mink_parity` — what matches Mink and what differs
    * - **Hands-on**
@@ -55,5 +57,6 @@ Where to go next
    :hidden:
 
    why_mink_warp
+   notation
    architecture
    mink_parity

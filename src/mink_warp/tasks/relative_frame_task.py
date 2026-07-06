@@ -19,7 +19,22 @@ from .task import TargetedTask
 
 
 class RelativeFrameTask(TargetedTask):
-    """Regulate the pose of a frame relative to another frame."""
+    r"""Regulate a frame pose relative to a root frame.
+
+    The target is a rigid transform :math:`T_{tr}` (frame :math:`t` expressed in
+    root :math:`r`). With current relative pose :math:`T_{br}`:
+
+    .. math::
+
+        e(q) = \log(T_{bt}) \quad \text{with} \quad T_{bt} = T_{br}\, T_{tr}^{-1}
+
+    The Jacobian accounts for both the regulated frame and the root frame
+    (chain rule on :math:`SE(3)`), matching Mink's ``RelativeFrameTask``.
+
+    Costs use the same units as :class:`FrameTask`:
+    :math:`[\mathrm{cost}] / [\mathrm{m}]` and
+    :math:`[\mathrm{cost}] / [\mathrm{rad}]`.
+    """
 
     k: int = 6
     target_width: int = 7
@@ -35,6 +50,18 @@ class RelativeFrameTask(TargetedTask):
         gain: float = 1.0,
         lm_damping: float = 0.0,
     ):
+        r"""Define a relative frame task.
+
+        Args:
+            frame_name: Regulated frame name.
+            frame_type: ``"body"``, ``"geom"``, or ``"site"``.
+            root_name: Reference frame name.
+            root_type: Reference frame type.
+            position_cost: In :math:`[\mathrm{cost}] / [\mathrm{m}]`.
+            orientation_cost: In :math:`[\mathrm{cost}] / [\mathrm{rad}]`.
+            gain: Task gain :math:`\alpha \in [0, 1]`.
+            lm_damping: LM damping scale.
+        """
         super().__init__(cost=np.zeros(6), gain=gain, lm_damping=lm_damping)
         self.frame_name = frame_name
         self.frame_type = frame_type

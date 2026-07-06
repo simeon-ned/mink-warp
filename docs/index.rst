@@ -13,7 +13,7 @@ Purpose
 -------
 
 mink-warp exists for **real-time, GPU-batched differential IK** in MuJoCo Warp
-pipelines — not as a replacement for `Newton IK <https://github.com/google-deepmind/newton>`_.
+pipelines — not as a replacement for `Newton <https://github.com/newton-physics/newton>`_ IK [Newton]_.
 It targets the same niche as **Mink** (composable tasks, velocity output, control
 loops), scaled to ``nworld`` on device. See :doc:`source/concepts/why_mink_warp`
 for a full comparison with Newton IK and when to use each.

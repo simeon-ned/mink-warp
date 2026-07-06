@@ -21,7 +21,15 @@ _SUBTREE_ID = 1
 
 
 class ComTask(TargetedTask):
-    """Regulate CoM of subtree body 1 (whole robot)."""
+    r"""Regulate the center of mass of subtree body 1 (whole robot).
+
+    .. math::
+
+        e(q) = c(q) - c^\star, \qquad J(q) = \frac{\partial c}{\partial q}
+
+    where :math:`c(q) \in \mathbb{R}^3` is the mass-weighted subtree CoM.
+    Cost units: :math:`[\mathrm{cost}] / [\mathrm{m}]` per axis.
+    """
 
     k: int = 3
     target_width: int = 3

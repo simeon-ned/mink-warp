@@ -51,23 +51,42 @@ def solve_ik(
     solver: Solver | None = None,
     limits: Sequence[Limit] | None = _UNSET,  # type: ignore[assignment]
 ) -> wp.array:
-    """Solve one differential-IK step; returns velocity ``(nworld, nv)``.
+    r"""Compute joint velocity tangent to the current configuration.
 
-    With the default (or any :class:`DLSSolver`) this is a pure velocity solve
-    that does **not** mutate the configuration. Optimizer backends (LM / L-BFGS)
-    advance the configuration and return the equivalent tangent velocity.
+    Differential IK minimizes a stacked task objective. Unconstrained
+    (:class:`DLSSolver`) solves the normal equations
 
-    ``damping=None`` uses the solver's own default (a supplied ``DLSSolver``
-    keeps its configured damping); pass a float to override it for this call.
+    .. math::
 
-    ``limits`` enforces hard joint limits via a :class:`ConstrainedSolver`
-    (mink-shaped): ``None`` uses the default :class:`ConfigurationLimit`, a list
-    supplies specific limits, ``[]`` disables them. If ``limits`` is omitted the
-    historical unconstrained behaviour is kept. ``limits`` is honoured only on
-    the auto-build path (``solver=None``); passing it together with an explicit
-    ``solver`` raises rather than silently dropping it — a cost-only backend
-    cannot enforce limits, and an explicit :class:`ConstrainedSolver` already has
-    its limits fixed at construction.
+        (H + \lambda I)\, v = -c, \qquad v = \frac{\Delta q}{\mathrm{d}t}
+
+    where :math:`H, c` come from :meth:`~mink_warp.Task.compute_residual` and
+    :math:`\lambda` is Tikhonov ``damping`` in
+    :math:`[\mathrm{cost}]^2 / [\mathrm{tangent}]`.
+
+    With hard limits, :class:`ConstrainedSolver` solves (per world):
+
+    .. math::
+
+        \begin{aligned}
+        \min_{\Delta q}\ & \tfrac{1}{2} \Delta q^\top H \Delta q + c^\top \Delta q \\
+        \text{s.t.}\ & \ell \leq \Delta q \leq u \quad \text{(box limits)} \\
+        & G \Delta q \leq h \quad \text{(general inequalities)}
+        \end{aligned}
+
+    Args:
+        configuration: Batched configuration; FK must be current.
+        tasks: Soft objectives to satisfy at weighted best.
+        dt: Integration timestep :math:`\mathrm{d}t` in [s].
+        damping: Tikhonov weight :math:`\lambda` on :math:`H` (solver default
+            when ``None``).
+        solver: Backend instance. ``None`` auto-builds :class:`DLSSolver` or
+            :class:`ConstrainedSolver` from ``limits``.
+        limits: Hard limits (Mink-shaped). ``None`` → default
+            :class:`ConfigurationLimit`; ``[]`` → none; omitted → unconstrained.
+
+    Returns:
+        Velocity :math:`v` with shape ``(nworld, nv)``.
     """
     if solver is None:
         if limits is _UNSET:

@@ -3,6 +3,12 @@
 Tasks and limits
 ================
 
+Differential inverse kinematics computes a velocity :math:`v = \Delta q / \mathrm{d}t`
+that reduces weighted task errors. Each task defines a residual
+:math:`e(q) \in \mathbb{R}^k` driven toward zero and a Jacobian
+:math:`J(q)` such that :math:`J \Delta q \approx -\alpha e` at first order
+(see :doc:`../concepts/notation`).
+
 mink-warp uses the same **tasks vs limits** split as Mink:
 
 .. grid:: 2

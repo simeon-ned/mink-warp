@@ -56,31 +56,32 @@ from .base import Solver
 
 
 class ConstrainedSolver(Solver):
-    """Batched box-constrained IK solver (hard joint limits via ADMM).
+    r"""Batched constrained IK via ADMM on the task normal equations.
+
+    Per world, solves:
+
+    .. math::
+
+        \min_{\Delta q}\ \tfrac{1}{2} \Delta q^\top H \Delta q + c^\top \Delta q
+        \quad \text{s.t.}\ \ell \leq \Delta q \leq u,\ G \Delta q \leq h
+
+    where :math:`H, c` match :class:`~mink_warp.DLSSolver`. Box limits are
+    enforced exactly each ADMM iteration; general rows converge with
+    ``admm_iters``.
 
     Args:
         configuration: Batched configuration to advance.
-        limits: Hard limits to enforce. ``None`` defaults to a single
-            :class:`ConfigurationLimit` (mink's ``limits=None`` behaviour); pass
-            ``[]`` to disable limits (then this reduces to a regularized DLS solve).
-        admm_iters: Inner ADMM iterations per solve (box feasibility holds at any
-            count; more tightens agreement with the true QP optimum, and is what
-            the general-inequality path relies on for feasibility).
-        rho_scale, rho_min, rho_max: Control the per-world ADMM penalty
-            ``rho = clamp(rho_scale*sqrt(min*max diag H), rho_min, rho_max)``.
-            ``rho_min`` must be > 0: it is the hard SPD safeguard that keeps
-            ``M = H + rho I`` positive-definite (so the tile Cholesky never sees
-            a zero pivot) even for a dof untouched by any task.
-        alpha: ADMM over-relaxation in [1, 2) (1.6 accelerates convergence).
-        damping: Levenberg-Marquardt damping added to ``H``'s diagonal (matches
-            mink's ``damping``, applied on top of per-task ``mu``).
-        sigma: SPD floor added to ``M``'s diagonal in the general-inequality path
-            (``M = H + sigma I + rho G^T G``); must be > 0. Unused by the box path.
-        use_inequalities: Force the general ``G dq <= h`` path even for box-only
-            limits (they emit their ``[P;-P]`` rows). Auto-enabled whenever a
-            limit is inequality-only (e.g. :class:`LinearInequalityLimit`). The
-            box path is faster and exactly feasible, so leave this False unless
-            you specifically want the dense solve.
+        limits: Hard limits. ``None`` → default :class:`~mink_warp.ConfigurationLimit`;
+            ``[]`` → unconstrained regularized DLS inside the solver.
+        admm_iters: Inner ADMM iterations per solve.
+        rho_scale, rho_min, rho_max: ADMM penalty
+            :math:`\rho = \mathrm{clamp}(\rho_{\mathrm{scale}} \sqrt{h_{\min} h_{\max}}, \ldots)`.
+        alpha: Over-relaxation in :math:`[1, 2)`.
+        damping: Tikhonov :math:`\lambda` on :math:`H` (matches ``solve_ik``).
+        sigma: SPD floor for the general-inequality path.
+        use_inequalities: Force dense :math:`G \Delta q \leq h` even for box
+            limits. Auto-enabled for inequality-only limits such as
+            :class:`~mink_warp.CollisionAvoidanceLimit`.
     """
 
     name = "constrained"

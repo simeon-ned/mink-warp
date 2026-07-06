@@ -29,7 +29,15 @@ from ..configuration import Configuration
 
 
 class Limit(abc.ABC):
-    """Abstract hard limit. Subclasses expose a box and/or dense inequality rows."""
+    r"""Abstract hard kinematic limit.
+
+    Limits constrain the tangent step :math:`\Delta q \in T_q(\mathcal{C})`
+    and are enforced by :class:`~mink_warp.ConstrainedSolver`. Each limit may
+    expose:
+
+    * **box** — per-dof bounds :math:`\ell \leq \Delta q \leq u`
+    * **dense rows** — :math:`G(q)\, \Delta q \leq h(q)`
+    """
 
     #: Number of dense ``G dq <= h`` rows this limit contributes (0 = box-only).
     n_inequalities: int = 0
@@ -68,18 +76,18 @@ class Limit(abc.ABC):
         G: wp.array,
         h: wp.array,
     ) -> None:
-        """Write this limit's ``n_inequalities`` dense rows into ``(G, h)``.
+        r"""Write dense inequality rows into shared buffers.
 
-        Rows ``[row_offset : row_offset + n_inequalities)`` of the shared padded
-        buffers are overwritten in place (the rest stay at their inert init of
-        ``0 dq <= +inf``).
+        Row :math:`i` encodes :math:`G_i \Delta q \leq h_i`. Buffers have shape
+        ``(nworld, m, nv)`` and ``(nworld, m)``; only rows owned by this limit
+        are overwritten.
 
         Args:
             configuration: Current batched configuration.
-            dt: Integration timestep [s].
-            row_offset: First row index this limit owns in the padded block.
-            G: Shared inequality matrix, shape ``(nworld, m, nv)``.
-            h: Shared inequality bound, shape ``(nworld, m)``.
+            dt: Timestep :math:`\mathrm{d}t` in [s].
+            row_offset: First row index for this limit.
+            G: Shared inequality matrix.
+            h: Shared bound vector.
         """
         raise NotImplementedError(
             f"{type(self).__name__} declares n_inequalities="

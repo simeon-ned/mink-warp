@@ -28,7 +28,8 @@ docs/
   conf.py
   index.rst
   installation.rst
-  references.rst
+    references.rst
+    references.bib
   source/
     concepts/           # batched design, Mink parity, architecture
     workflows/          # quickstart, batched IK, solvers, CUDA graphs
