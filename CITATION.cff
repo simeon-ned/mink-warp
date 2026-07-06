@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you use mink-warp, please cite the software below."
+title: "mink-warp: Batched differential inverse kinematics on MuJoCo Warp"
+version: 0.1.0
+date-released: 2026-07-06
+license: Apache-2.0
+repository-code: "https://github.com/simeon-ned/mink-warp"
+url: "https://github.com/simeon-ned/mink-warp"
+authors:
+  - family-names: Nedelchev
+    given-names: Simeon
+  - family-names: Domrachev
+    given-names: Ivan
+keywords:
+  - inverse-kinematics
+  - mujoco
+  - mujoco-warp
+  - warp
+  - gpu
+  - robotics
+preferred-citation:
+  type: software
+  title: "mink-warp: Batched differential inverse kinematics on MuJoCo Warp"
+  authors:
+    - family-names: Nedelchev
+      given-names: Simeon
+    - family-names: Domrachev
+      given-names: Ivan
+  year: 2026
+  url: "https://github.com/simeon-ned/mink-warp"
+  repository-code: "https://github.com/simeon-ned/mink-warp"
+  license: Apache-2.0

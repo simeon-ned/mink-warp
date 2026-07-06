@@ -3,6 +3,22 @@
 References
 ==========
 
+Cross-references elsewhere use keys like ``[Mink]_``. To cite **mink-warp** itself,
+use `CITATION.cff <https://github.com/simeon-ned/mink-warp/blob/main/CITATION.cff>`_
+(GitHub “Cite this repository”) or the BibTeX below.
+
+Cite mink-warp
+--------------
+
+Nedelchev, S., & Domrachev, I. (2026). *mink-warp: Batched differential inverse
+kinematics on MuJoCo Warp*.
+
+.. dropdown:: Cite
+   :icon: copy
+
+   .. literalinclude:: ../CITATION.bib
+      :language: bibtex
+
 .. _publications:
 
 Publications
@@ -103,7 +119,8 @@ Related software
 All entries
 -----------
 
-Download :download:`references.bib <references.bib>` or expand below.
+Software: :download:`CITATION.bib <../CITATION.bib>` ·
+Download :download:`references.bib <references.bib>` (method papers + related software) or expand below.
 
 .. dropdown:: Full BibTeX file
    :icon: book

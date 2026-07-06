@@ -11,8 +11,8 @@ import sphinx_book_theme
 sys.path.insert(0, os.path.abspath("../src"))
 
 project = "mink-warp"
-copyright = "2026, mink-warp contributors"
-author = "mink-warp contributors"
+copyright = "2026, Simeon Nedelchev and Ivan Domrachev"
+author = "Simeon Nedelchev, Ivan Domrachev"
 
 # Version from pyproject.toml when available.
 try:
