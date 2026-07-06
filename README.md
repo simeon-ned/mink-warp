@@ -1,5 +1,9 @@
 # mink-warp
 
+<p align="center">
+  <img src="docs/_static/cassie_equality.gif" alt="1024 Cassie robots with equality-constraint IK (examples/03_equality_cassie.py)" width="800">
+</p>
+
 [![Build](https://img.shields.io/github/actions/workflow/status/simeon-ned/mink-warp/ci.yml?branch=main)](https://github.com/simeon-ned/mink-warp/actions)
 [![Documentation](https://img.shields.io/github/actions/workflow/status/simeon-ned/mink-warp/docs.yml?branch=main&label=docs)](https://simeon-ned.github.io/mink-warp/)
 [![License](https://img.shields.io/github/license/simeon-ned/mink-warp)](https://github.com/simeon-ned/mink-warp/blob/main/LICENSE)

@@ -25,7 +25,7 @@ from _viser_utils import grid_origins
 NUM_WORLDS = 1024
 DT = 0.01
 FREQUENCY = 50.0
-ENV_SPACING = 2.5
+ENV_SPACING = 1.5
 AMP_COM_Z = 0.15
 FREQ_COM = 0.35
 
