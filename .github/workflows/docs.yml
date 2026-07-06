@@ -40,12 +40,6 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Configure Pages
-        id: pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
       - name: Build docs
         run: uv run --group docs sphinx-build -W -j auto docs docs/_build
 
@@ -63,6 +57,13 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # Enable the Pages site (needs admin + Pages-eligible plan). Kept in the
+      # deploy job so the build job stays green on PRs even before Pages is on.
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
