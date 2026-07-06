@@ -1,14 +1,15 @@
 # mink-warp
 
+
+[![Build](https://github.com/simeon-ned/mink-warp/actions/workflows/ci.yml/badge.svg)](https://github.com/simeon-ned/mink-warp/actions)
+[![Documentation](https://github.com/simeon-ned/mink-warp/actions/workflows/docs.yml/badge.svg)](https://simeon-ned.github.io/mink-warp/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![PyPI version](https://img.shields.io/pypi/v/mink-warp)](https://pypi.org/project/mink-warp/)
+[![PyPI downloads](https://img.shields.io/badge/downloads-pypistats-blue)](https://pypistats.org/packages/mink-warp)
+
 <p align="center">
   <img src="docs/_static/cassie_equality.gif" alt="1024 Cassie robots with equality-constraint IK (examples/03_equality_cassie.py)" width="800">
 </p>
-
-[![Build](https://img.shields.io/github/actions/workflow/status/simeon-ned/mink-warp/ci.yml?branch=main)](https://github.com/simeon-ned/mink-warp/actions)
-[![Documentation](https://img.shields.io/github/actions/workflow/status/simeon-ned/mink-warp/docs.yml?branch=main&label=docs)](https://simeon-ned.github.io/mink-warp/)
-[![License](https://img.shields.io/github/license/simeon-ned/mink-warp)](https://github.com/simeon-ned/mink-warp/blob/main/LICENSE)
-[![PyPI](https://img.shields.io/pypi/v/mink-warp)](https://pypi.org/project/mink-warp/)
-[![PyPI downloads](https://img.shields.io/pypi/dm/mink-warp?color=blue)](https://pypistats.org/packages/mink-warp)
 
 **mink-warp** is batched differential inverse kinematics on [MuJoCo Warp](https://github.com/google-deepmind/mujoco_warp), with a [Mink](https://github.com/kevinzakka/mink)-shaped API. Given a robot configuration and a stack of task-space objectives, it computes joint velocities for **many parallel worlds** on the GPU — the same control-loop niche as Mink, scaled to `nworld`.
 
