@@ -1,0 +1,69 @@
+name: docs
+
+# Build the Sphinx site and publish it to GitHub Pages.
+#
+# Requirements (repo Settings, one-time, needs admin):
+#   Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
+# The `configure-pages` step below also tries to enable this automatically
+# (`enablement: true`), which works when the token has admin rights and the
+# repo's plan allows Pages (public repos, or private repos on Team/Enterprise).
+#
+# - push to main       -> build + deploy (production)
+# - pull_request        -> build only (validate docs, no deploy)
+# - workflow_dispatch   -> build + deploy (manual, any branch)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; don't cancel an in-flight production deploy.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Build docs
+        run: uv run --group docs sphinx-build -W -j auto docs docs/_build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/_build
+
+  deploy:
+    needs: build
+    # Deploy only on main pushes or a manual dispatch, never on PRs.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # Enable the Pages site (needs admin + Pages-eligible plan). Kept in the
+      # deploy job so the build job stays green on PRs even before Pages is on.
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
