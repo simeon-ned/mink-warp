@@ -21,7 +21,7 @@ For usage, concepts, and API reference, see the [documentation](https://simeon-n
 
 ## Installation
 
-From PyPI (when published):
+From PyPI:
 
 ```bash
 uv add mink-warp
@@ -87,9 +87,6 @@ mink-warp mirrors the API and conventions of [Mink](https://github.com/kevinzakk
 
 Implementation patterns also draw from GPU IK / physics stacks in the MuJoCo Warp ecosystem and from [Newton](https://github.com/newton-physics/newton) (NVIDIA + Google DeepMind), though mink-warp is **not** a wrapper around Newton — it targets **differential** IK with a Mink-shaped API on `mujoco.MjModel` + mjwarp.
 
-## License
-
-Apache-2.0 — see [LICENSE](LICENSE).
 
 ## Citation
 
@@ -108,3 +105,8 @@ If you use mink-warp in your research, please cite it as follows:
 ```
 
 Also available as [CITATION.cff](CITATION.cff) and [CITATION.bib](CITATION.bib). Method papers: [docs/references.bib](docs/references.bib).
+
+
+## License
+
+Apache-2.0 — see [LICENSE](LICENSE).
