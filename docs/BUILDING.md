@@ -61,7 +61,19 @@ When adding a public symbol, document it in source and list it on the matching A
 Runnable scripts under `examples/docs/` are included via ``literalinclude`` and
 checked by ``tests/test_docs.py``.
 
-## Deploy (optional)
+## Deploy (GitHub Pages)
 
-Add a GitHub Actions workflow that runs `make docs` and publishes `docs/_build` to
-GitHub Pages on pushes to `main`.
+`.github/workflows/docs.yml` builds the site and publishes it to GitHub Pages:
+
+- push to `main` — build + deploy (production)
+- pull request — build only (validates the docs, no deploy)
+- manual `workflow_dispatch` — build + deploy from any branch
+
+**One-time setup (needs repo admin):** Settings → Pages → *Build and deployment*
+→ Source: **GitHub Actions**. The workflow's `configure-pages` step also attempts
+this automatically (`enablement: true`); that only succeeds when the token has
+admin rights and the repo plan allows Pages (public repos, or private repos on
+Team/Enterprise). On a free private repo the deploy step fails until the repo is
+made public or upgraded.
+
+The build step runs the same `sphinx-build -W -j auto` as `make docs`.
