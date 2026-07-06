@@ -1,0 +1,60 @@
+name: release
+
+# Build the sdist + wheel and publish to PyPI when a GitHub Release is
+# published (tag the release, e.g. v0.1.0). Uses PyPI Trusted Publishing
+# (OIDC) — no API token/secret required.
+#
+# One-time setup (needs PyPI project admin):
+#   PyPI -> project 'mink-warp' -> Publishing -> add a GitHub trusted publisher
+#     owner: simeon-ned   repo: mink-warp
+#     workflow: release.yml   environment: pypi
+#   (Use a "pending publisher" if the project does not exist on PyPI yet.)
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Build sdist + wheel
+        run: uv build
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mink-warp
+    permissions:
+      id-token: write  # required for PyPI Trusted Publishing (OIDC)
+    steps:
+      - name: Download dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Publish to PyPI
+        run: uv publish
