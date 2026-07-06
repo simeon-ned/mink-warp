@@ -14,7 +14,7 @@ name: docs
 
 on:
   push:
-    branches: [main]
+    branches: [main, ci/gh-pages-docs]  # TEMP: branch added to smoke-test the pipeline
   pull_request:
     branches: [main]
   workflow_dispatch:
