@@ -310,6 +310,50 @@ def linear_ineq_scatter(
         G[worldid, r, j] = Gc[i, j]
 
 
+@wp.kernel
+def reset_ineq_block(
+    row_offset: int,
+    G: wp.array3d[float],
+    h: wp.array2d[float],
+):
+    """Reset a ``(nworld, m)`` row block of ``G``/``h`` to inert (``0``, ``BOX_INF``).
+
+    Launched over ``dim=(nworld, m)``. Lets a limit clear its own block on device
+    (self-contained) so the host only has to upload the few *active* rows.
+    """
+    worldid, i = wp.tid()
+    nv = G.shape[2]
+    r = row_offset + i
+    h[worldid, r] = float(BOX_INF)
+    for j in range(nv):
+        G[worldid, r, j] = 0.0
+
+
+@wp.kernel
+def scatter_ineq_active(
+    aw: wp.array[int],  # (K,) world of each active row
+    aidx: wp.array[int],  # (K,) row index within the block
+    ag: wp.array2d[float],  # (K, nv) row coefficients
+    ah: wp.array[float],  # (K,) bound
+    row_offset: int,
+    G: wp.array3d[float],
+    h: wp.array2d[float],
+):
+    """Scatter ``K`` host-built active rows into ``G``/``h`` at ``row_offset``.
+
+    Only the active (near-collision) rows are uploaded and written — the inert
+    rows stay at whatever :func:`reset_ineq_block` left — so per step the host →
+    device traffic is ``K*(nv+1)`` floats instead of the whole padded block.
+    """
+    k = wp.tid()
+    nv = G.shape[2]
+    w = aw[k]
+    r = row_offset + aidx[k]
+    h[w, r] = ah[k]
+    for j in range(nv):
+        G[w, r, j] = ag[k, j]
+
+
 # Cache of (nv, m, iters)-specialised inequality-ADMM kernels.
 _ADMM_INEQ_CACHE: dict[tuple[int, int, int], Any] = {}
 

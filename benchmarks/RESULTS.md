@@ -275,3 +275,78 @@ uv run python benchmarks/bench_constrained.py g1    --solvers dls constrained co
 
 _Numbers will shift with GPU model, batch, task stack, and warp/mujoco-warp versions. Re-run on
 your target hardware._
+
+---
+
+## Closed-kinematics + collision-avoidance tasks (host-assembly hot path)
+
+`EqualityConstraintTask` (Cassie closed four-bar chains) and
+`CollisionAvoidanceLimit` (dual iiwa self-collision) build their rows from host
+MuJoCo (`mj_fwdPosition`, `mj_geomDistance`, `mj_jac`) — one world at a time.
+On GPU the QP solve is offloaded, so this host assembly, not the solve,
+dominates the step (its share `hot %` climbs toward 100% as the batch grows).
+`bench_tasks.py` measures throughput, the host-assembly share, the device
+broadphase skip-rate (`bp-skip`), and mink parity.
+
+**Accuracy is unchanged by every optimization here** (bit-identical rows), so the
+mink parity floor is exactly the feature branch's: equality `|Δe| 3.7e-9`,
+`|ΔJ| 2.3e-8`; collision `|ΔG| 1.0e-7`, `|Δh| 1.5e-6`.
+
+Optimizations (all parity-preserving):
+- **Equality:** `mj_forward → mj_fwdPosition` (equality `efc_pos`/`efc_J` are
+  position-only) + drop a redundant `efc_J` copy.
+- **Collision** (four layers, each moving more of the step off the serial host):
+  1. **Device broadphase** — a kernel runs the geom-pair proximity tests in
+     parallel over every `(world, pair)` off the batched `geom_xpos`, emitting a
+     candidate mask; worlds with no nearby pair skip host work, and the mask
+     replaces the per-world host numpy broadphase.
+  2. **`mj_fwdPosition → mj_kinematics`** in the narrowphase (geom distances need
+     only geom poses).
+  3. **Device contact Jacobian** — the per-contact host `mj_jac` pair (the bulk
+     of host time) is gone: a single `(K, nv)` kernel evaluates both witness
+     Jacobians inline from `cdof`/`subtree_com` (the exact `mj_jac` formula) and
+     assembles `sign·nᵀ(J2−J1)` for every active contact across all worlds at once.
+  4. **Vectorized host collection + compact scatter** — `mj_geomDistance` writes
+     witnesses into a preallocated buffer; normals/bounds/signs are derived
+     vectorised; only the `K` active rows (not the padded block) reach device.
+
+Throughput on an RTX 4070 Ti SUPER (eager, `--collision-motion dense`):
+
+| scene | worlds | baseline solves/s | optimized solves/s | speedup | host share (base → opt) |
+|---|--:|--:|--:|--:|--:|
+| cassie (nv=32, equality)   | 256  |  9,367 | 11,241 | 1.20× | 44% → 33% |
+| cassie (nv=32, equality)   | 1024 | 16,357 | 22,651 | 1.38× | 74% → 64% |
+| cassie (nv=32, equality)   | 4096 | 20,365 | 30,947 | 1.52× | 92% → 87% |
+| dual iiwa (nv=14, collision) | 256  | 18,528 |  92,873 | **5.0×** | 91% → 51% |
+| dual iiwa (nv=14, collision) | 1024 | 20,326 | 155,870 | **7.7×** | 95% → 71% |
+| dual iiwa (nv=14, collision) | 4096 | 19,950 | 192,514 | **9.7×** | 95% → 80% |
+
+The collision speedup grows with the batch: the bigger the batch, the more the
+host assembly dominated the baseline, so moving the Jacobian + narrowphase
+assembly to a batched device pass (and shrinking the Python per-contact work)
+lifts the whole step — 9.7× at 4096 worlds with **bit-identical** rows. Baseline
+= the feature branch's own `mj_forward` + per-contact `mj_jac` + full-buffer
+round-trip code.
+
+**Device broadphase, data-dependent.** The `dense` trajectory sweeps the arms
+through each other, so ~⅓ of the (phase-offset) worlds are near every step
+(`bp-skip ≈ 67%`). When collisions are sparse (`--collision-motion sparse`, arms
+kept on their own sides) the prefilter drops **every** world it can
+(`bp-skip = 100%`) and host narrowphase all but vanishes — throughput then
+approaches the pure batched-solve rate:
+
+| worlds | dense host `hot µs` | sparse host `hot µs` | sparse solves/s |
+|---|--:|--:|--:|
+| 256  |  1,396 |   154 | 171,688 |
+| 1024 |  4,630 |   282 | 461,293 |
+| 4096 | 17,106 |   509 | 892,070 |
+
+At 4096 worlds the sparse case sustains **892 k solves/s** (44× the baseline's
+20 k), and even the dense case holds 193 k — the batched-GPU broadphase +
+Jacobian paying off exactly where a serial host loop wasted the most.
+
+```bash
+uv run python benchmarks/bench_tasks.py --check                                  # mink parity
+uv run python benchmarks/bench_tasks.py --profile --device cuda:0 --nworld 256 1024 4096
+uv run python benchmarks/bench_tasks.py dual_iiwa --profile --collision-motion sparse --device cuda:0
+```

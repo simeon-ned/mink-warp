@@ -19,6 +19,7 @@ throughput sweep and the CPU-vs-GPU parity check.
 | `bench_solvers.py`| Solver comparison: throughput **and** end-effector tracking accuracy (`|Δpos|`) per backend on the same trajectory. |
 | `bench_constrained.py`| Constrained solver: throughput + **max joint-limit violation** vs `dls`, and `--check` accuracy sweep over `admm_iters` vs mink `daqp`+`ConfigurationLimit`. `--solvers` accepts `constrained` (fast box path) and `constrained-ineq` (general `G Δq ≤ h` path). |
 | `bench_parity.py` | Accuracy: replays a trajectory through mink (CPU, `daqp`, `limits=[]`) and mink-warp (world 0), reports tangent-velocity `|Δv|` and configuration `|Δq|`. |
+| `bench_tasks.py`  | Closed-kinematics (`EqualityConstraintTask`, Cassie) + collision-avoidance (`CollisionAvoidanceLimit`, dual iiwa): throughput, **host-assembly component split** (`hot %`), device-broadphase skip-rate (`bp-skip`), and `--check` parity vs mink (equality `e`/`J`, collision `G`/`h`). `--collision-motion {dense,sparse}`. These tasks' hot path is host MuJoCo, not the GPU solve. |
 | `common.py`       | `summarize` (ported verbatim from mink) + batched helpers (`throughput`, `sync`). |
 | `scenes.py`       | Batched scene registry: `panda` (fixed base, parity-safe), `g1` (floating base, throughput). |
 
@@ -54,6 +55,11 @@ uv run python benchmarks/bench_solvers.py g1 --motion aggressive --nworld 4096 -
 # Accuracy parity vs mink (DLS backend)
 uv run python benchmarks/bench_parity.py            # PASS/FAIL at --tol
 uv run python benchmarks/bench_parity.py --steps 500 --tol 2e-3
+
+# Closed-kinematics + collision-avoidance tasks (host-assembly hot path)
+uv run python benchmarks/bench_tasks.py --check                       # parity vs mink
+uv run python benchmarks/bench_tasks.py --profile --device cuda:0 --nworld 256 1024 4096
+uv run python benchmarks/bench_tasks.py dual_iiwa --profile --collision-motion sparse --device cuda:0
 ```
 
 ## Notes
